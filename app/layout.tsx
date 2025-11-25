@@ -5,6 +5,9 @@ import { AuthProvider } from "@/lib/auth-context";
 export const metadata: Metadata = {
   title: "Solar Sales Manager",
   description: "Professional solar sales customer management system",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
