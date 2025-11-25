@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Customer, StepData } from '@/types';
 import { formatDate, getStepName, isStepSkipped } from '@/lib/utils';
 
-export default function CustomerDetailPage({ params }: { params: { id: string } }) {
+export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [steps, setSteps] = useState<StepData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,13 +17,13 @@ export default function CustomerDetailPage({ params }: { params: { id: string } 
 
   useEffect(() => {
     fetchCustomerData();
-  }, [params.id]);
+  }, [id]);
 
   const fetchCustomerData = async () => {
     try {
       const [customerRes, stepsRes] = await Promise.all([
-        fetch(`/api/customers/${params.id}`),
-        fetch(`/api/customers/${params.id}/steps`),
+        fetch(`/api/customers/${id}`),
+        fetch(`/api/customers/${id}/steps`),
       ]);
 
       const customerData = await customerRes.json();

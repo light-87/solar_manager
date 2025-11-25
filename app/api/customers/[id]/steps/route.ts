@@ -4,13 +4,14 @@ import { supabase } from '@/lib/supabase';
 // GET all steps for a customer
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { data, error } = await supabase
       .from('step_data')
       .select('*')
-      .eq('customer_id', params.id)
+      .eq('customer_id', id)
       .order('step_number', { ascending: true });
 
     if (error) {
@@ -30,9 +31,10 @@ export async function GET(
 // POST or UPDATE a step
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { step_number, data } = body;
 
@@ -47,7 +49,7 @@ export async function POST(
     const { data: existingStep } = await supabase
       .from('step_data')
       .select('*')
-      .eq('customer_id', params.id)
+      .eq('customer_id', id)
       .eq('step_number', step_number)
       .single();
 
@@ -58,7 +60,7 @@ export async function POST(
       const { data: updatedData, error } = await supabase
         .from('step_data')
         .update({ data })
-        .eq('customer_id', params.id)
+        .eq('customer_id', id)
         .eq('step_number', step_number)
         .select()
         .single();
@@ -74,7 +76,7 @@ export async function POST(
         .from('step_data')
         .insert([
           {
-            customer_id: params.id,
+            customer_id: id,
             step_number,
             data,
           },
