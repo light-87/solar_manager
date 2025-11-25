@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import Link from 'next/link';
 interface Tab {
   name: string;
   href: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   roles: ('admin' | 'employee')[];
 }
 
