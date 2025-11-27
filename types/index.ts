@@ -3,9 +3,22 @@ export type UserRole = 'admin' | 'employee';
 export interface User {
   id: string;
   role: UserRole;
-  pin_hash: string;
+  username: string;
+  pin: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  user_id: string;
+  username: string;
+  role: string;
+  action: string;
+  is_super_admin: boolean;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
 }
 
 export type CustomerType = 'finance' | 'cash';

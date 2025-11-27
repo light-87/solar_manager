@@ -1,302 +1,554 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
+import { useAuth } from '@/lib/auth-context';
+import { getWorkspaceCode, getVendorName } from '@/lib/env';
 
 export default function SettingsPage() {
-  const [adminPin, setAdminPin] = useState({ current: '', new: '', confirm: '' });
-  const [employeePin, setEmployeePin] = useState({ current: '', new: '', confirm: '' });
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [employeeLoading, setEmployeeLoading] = useState(false);
-  const [adminSuccess, setAdminSuccess] = useState('');
-  const [employeeSuccess, setEmployeeSuccess] = useState('');
-  const [adminError, setAdminError] = useState('');
-  const [employeeError, setEmployeeError] = useState('');
+  const { userId, username } = useAuth();
+  const [activeTab, setActiveTab] = useState<'own' | 'employee'>('own');
 
-  const handleAdminPinChange = async (e: React.FormEvent) => {
+  // Own credentials state
+  const [ownUsername, setOwnUsername] = useState('');
+  const [ownCurrentPin, setOwnCurrentPin] = useState('');
+  const [ownNewUsername, setOwnNewUsername] = useState('');
+  const [ownNewPin, setOwnNewPin] = useState('');
+  const [ownConfirmPin, setOwnConfirmPin] = useState('');
+
+  // Employee credentials state
+  const [employeeId, setEmployeeId] = useState('');
+  const [employeeUsername, setEmployeeUsername] = useState('');
+  const [empCurrentPin, setEmpCurrentPin] = useState('');
+  const [empNewUsername, setEmpNewUsername] = useState('');
+  const [empNewPin, setEmpNewPin] = useState('');
+  const [empConfirmPin, setEmpConfirmPin] = useState('');
+
+  // UI state
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+
+  const workspaceCode = getWorkspaceCode();
+  const vendorName = getVendorName();
+
+  // Load current username and employee info
+  useEffect(() => {
+    if (username) {
+      setOwnUsername(username);
+    }
+
+    // Load employee info
+    const loadEmployeeInfo = async () => {
+      try {
+        const response = await fetch(`/api/auth/manage-user?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.employee) {
+            setEmployeeId(data.employee.id);
+            setEmployeeUsername(data.employee.username);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load employee info:', error);
+      }
+    };
+
+    loadEmployeeInfo();
+  }, [username, userId]);
+
+  // Handle own username change
+  const handleOwnUsernameChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAdminError('');
-    setAdminSuccess('');
+    setError('');
+    setSuccess('');
 
-    if (adminPin.new !== adminPin.confirm) {
-      setAdminError('New PINs do not match');
+    if (!ownNewUsername.trim()) {
+      setError('Username cannot be empty');
       return;
     }
 
-    if (!/^\d{5}$/.test(adminPin.new)) {
-      setAdminError('PIN must be exactly 5 digits');
+    if (!ownCurrentPin || !/^\d{5}$/.test(ownCurrentPin)) {
+      setError('Current PIN must be exactly 5 digits');
       return;
     }
 
-    setAdminLoading(true);
+    setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/change-pin', {
+      const response = await fetch('/api/auth/manage-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          role: 'admin',
-          currentPin: adminPin.current,
-          newPin: adminPin.new,
+          action: 'change-own-username',
+          userId,
+          currentPin: ownCurrentPin,
+          newUsername: ownNewUsername,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setAdminError(data.error || 'Failed to change PIN');
-        setAdminLoading(false);
+        setError(data.error || 'Failed to change username');
+        setLoading(false);
         return;
       }
 
-      setAdminSuccess('Admin PIN changed successfully');
-      setAdminPin({ current: '', new: '', confirm: '' });
-      setAdminLoading(false);
-    } catch (error) {
-      setAdminError('An error occurred. Please try again.');
-      setAdminLoading(false);
+      setSuccess('Username changed successfully. Please log in again with your new username.');
+      setOwnUsername(ownNewUsername);
+      setOwnNewUsername('');
+      setOwnCurrentPin('');
+
+      // Logout after 2 seconds
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setLoading(false);
     }
   };
 
-  const handleEmployeePinChange = async (e: React.FormEvent) => {
+  // Handle own PIN change
+  const handleOwnPinChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmployeeError('');
-    setEmployeeSuccess('');
+    setError('');
+    setSuccess('');
 
-    if (employeePin.new !== employeePin.confirm) {
-      setEmployeeError('New PINs do not match');
+    if (!ownCurrentPin || !/^\d{5}$/.test(ownCurrentPin)) {
+      setError('Current PIN must be exactly 5 digits');
       return;
     }
 
-    if (!/^\d{5}$/.test(employeePin.new)) {
-      setEmployeeError('PIN must be exactly 5 digits');
+    if (!/^\d{5}$/.test(ownNewPin)) {
+      setError('New PIN must be exactly 5 digits');
       return;
     }
 
-    setEmployeeLoading(true);
+    if (ownNewPin !== ownConfirmPin) {
+      setError('New PINs do not match');
+      return;
+    }
+
+    if (ownNewPin === ownCurrentPin) {
+      setError('New PIN must be different from current PIN');
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      // Use admin's current PIN to change employee PIN
-      const response = await fetch('/api/auth/change-pin', {
+      const response = await fetch('/api/auth/manage-user', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          role: 'employee',
-          currentPin: employeePin.current,
-          newPin: employeePin.new,
+          action: 'change-own-pin',
+          userId,
+          currentPin: ownCurrentPin,
+          newPin: ownNewPin,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setEmployeeError(data.error || 'Failed to change PIN');
-        setEmployeeLoading(false);
+        setError(data.error || 'Failed to change PIN');
+        setLoading(false);
         return;
       }
 
-      setEmployeeSuccess('Employee PIN changed successfully');
-      setEmployeePin({ current: '', new: '', confirm: '' });
-      setEmployeeLoading(false);
-    } catch (error) {
-      setEmployeeError('An error occurred. Please try again.');
-      setEmployeeLoading(false);
+      setSuccess('PIN changed successfully');
+      setOwnCurrentPin('');
+      setOwnNewPin('');
+      setOwnConfirmPin('');
+      setLoading(false);
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  // Handle employee username change
+  const handleEmployeeUsernameChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!empNewUsername.trim()) {
+      setError('Username cannot be empty');
+      return;
+    }
+
+    if (!empCurrentPin || !/^\d{5}$/.test(empCurrentPin)) {
+      setError('Your admin PIN must be exactly 5 digits');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/manage-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change-employee-username',
+          userId,
+          currentPin: empCurrentPin,
+          newUsername: empNewUsername,
+          targetUserId: employeeId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to change employee username');
+        setLoading(false);
+        return;
+      }
+
+      setSuccess('Employee username changed successfully');
+      setEmployeeUsername(empNewUsername);
+      setEmpNewUsername('');
+      setEmpCurrentPin('');
+      setLoading(false);
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  // Handle employee PIN change
+  const handleEmployeePinChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!empCurrentPin || !/^\d{5}$/.test(empCurrentPin)) {
+      setError('Your admin PIN must be exactly 5 digits');
+      return;
+    }
+
+    if (!/^\d{5}$/.test(empNewPin)) {
+      setError('New employee PIN must be exactly 5 digits');
+      return;
+    }
+
+    if (empNewPin !== empConfirmPin) {
+      setError('New PINs do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/manage-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change-employee-pin',
+          userId,
+          currentPin: empCurrentPin,
+          newPin: empNewPin,
+          targetUserId: employeeId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to change employee PIN');
+        setLoading(false);
+        return;
+      }
+
+      setSuccess('Employee PIN changed successfully');
+      setEmpCurrentPin('');
+      setEmpNewPin('');
+      setEmpConfirmPin('');
+      setLoading(false);
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setLoading(false);
     }
   };
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>
       <DashboardLayout>
-        <div className="max-w-4xl space-y-6">
+        <div className="space-y-6">
           {/* Header */}
           <div>
-            <h2 className="text-2xl font-semibold text-stone-900">Settings</h2>
-            <p className="text-stone-600 mt-1">
-              Manage system settings and user PINs
-            </p>
+            <h1 className="text-2xl font-bold text-stone-900">Settings</h1>
+            <p className="text-stone-600 mt-1">Manage credentials and workspace configuration</p>
           </div>
 
-          {/* Admin PIN Change */}
-          <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <h3 className="text-lg font-semibold text-stone-900 mb-4">
-              Change Admin PIN
-            </h3>
-            <form onSubmit={handleAdminPinChange} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  Current Admin PIN
-                </label>
-                <input
-                  type="password"
-                  value={adminPin.current}
-                  onChange={(e) =>
-                    /^\d{0,5}$/.test(e.target.value) &&
-                    setAdminPin({ ...adminPin, current: e.target.value })
-                  }
-                  className="w-full max-w-xs px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  placeholder="•••••"
-                  maxLength={5}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  New Admin PIN
-                </label>
-                <input
-                  type="password"
-                  value={adminPin.new}
-                  onChange={(e) =>
-                    /^\d{0,5}$/.test(e.target.value) &&
-                    setAdminPin({ ...adminPin, new: e.target.value })
-                  }
-                  className="w-full max-w-xs px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  placeholder="•••••"
-                  maxLength={5}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  Confirm New Admin PIN
-                </label>
-                <input
-                  type="password"
-                  value={adminPin.confirm}
-                  onChange={(e) =>
-                    /^\d{0,5}$/.test(e.target.value) &&
-                    setAdminPin({ ...adminPin, confirm: e.target.value })
-                  }
-                  className="w-full max-w-xs px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  placeholder="•••••"
-                  maxLength={5}
-                  required
-                />
-              </div>
-
-              {adminError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                  {adminError}
-                </div>
-              )}
-
-              {adminSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                  {adminSuccess}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={adminLoading}
-                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 text-white font-medium rounded-lg transition-colors"
-              >
-                {adminLoading ? 'Changing...' : 'Change Admin PIN'}
-              </button>
-            </form>
-          </div>
-
-          {/* Employee PIN Change */}
-          <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <h3 className="text-lg font-semibold text-stone-900 mb-4">
-              Change Employee PIN
-            </h3>
-            <form onSubmit={handleEmployeePinChange} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  Current Employee PIN
-                </label>
-                <input
-                  type="password"
-                  value={employeePin.current}
-                  onChange={(e) =>
-                    /^\d{0,5}$/.test(e.target.value) &&
-                    setEmployeePin({ ...employeePin, current: e.target.value })
-                  }
-                  className="w-full max-w-xs px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  placeholder="•••••"
-                  maxLength={5}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  New Employee PIN
-                </label>
-                <input
-                  type="password"
-                  value={employeePin.new}
-                  onChange={(e) =>
-                    /^\d{0,5}$/.test(e.target.value) &&
-                    setEmployeePin({ ...employeePin, new: e.target.value })
-                  }
-                  className="w-full max-w-xs px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  placeholder="•••••"
-                  maxLength={5}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  Confirm New Employee PIN
-                </label>
-                <input
-                  type="password"
-                  value={employeePin.confirm}
-                  onChange={(e) =>
-                    /^\d{0,5}$/.test(e.target.value) &&
-                    setEmployeePin({ ...employeePin, confirm: e.target.value })
-                  }
-                  className="w-full max-w-xs px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  placeholder="•••••"
-                  maxLength={5}
-                  required
-                />
-              </div>
-
-              {employeeError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                  {employeeError}
-                </div>
-              )}
-
-              {employeeSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                  {employeeSuccess}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={employeeLoading}
-                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 text-white font-medium rounded-lg transition-colors"
-              >
-                {employeeLoading ? 'Changing...' : 'Change Employee PIN'}
-              </button>
-            </form>
-          </div>
-
-          {/* Information */}
+          {/* Workspace Info */}
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-            <h4 className="font-semibold text-amber-900 mb-2">
-              Security Best Practices
-            </h4>
-            <ul className="text-sm text-amber-800 space-y-1">
-              <li>• Use unique PINs that are not easily guessable</li>
-              <li>• Change PINs regularly for security</li>
-              <li>• Do not share PINs with unauthorized personnel</li>
-              <li>• Store PINs securely and never write them down in plain text</li>
-            </ul>
+            <h2 className="text-lg font-semibold text-amber-900 mb-4">Workspace Information</h2>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-amber-800">Workspace Code:</span>
+                <span className="text-sm text-amber-900 font-mono bg-white px-3 py-1 rounded">{workspaceCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-amber-800">Vendor Name:</span>
+                <span className="text-sm text-amber-900">{vendorName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-amber-800">Your Username:</span>
+                <span className="text-sm text-amber-900 font-mono">{ownUsername}</span>
+              </div>
+            </div>
           </div>
+
+          {/* Tabs */}
+          <div className="border-b border-stone-200">
+            <div className="flex space-x-8">
+              <button
+                onClick={() => {
+                  setActiveTab('own');
+                  setError('');
+                  setSuccess('');
+                }}
+                className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'own'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-stone-500 hover:text-stone-700'
+                }`}
+              >
+                My Credentials
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('employee');
+                  setError('');
+                  setSuccess('');
+                }}
+                className={`pb-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'employee'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-stone-500 hover:text-stone-700'
+                }`}
+              >
+                Employee Management
+              </button>
+            </div>
+          </div>
+
+          {/* Success/Error Messages */}
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              {success}
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {/* Own Credentials Tab */}
+          {activeTab === 'own' && (
+            <div className="space-y-6">
+              {/* Change Own Username */}
+              <div className="bg-white border border-stone-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-stone-900 mb-4">Change Username</h3>
+                <form onSubmit={handleOwnUsernameChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      New Username
+                    </label>
+                    <input
+                      type="text"
+                      value={ownNewUsername}
+                      onChange={(e) => setOwnNewUsername(e.target.value)}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="Enter new username"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      Current PIN (for verification)
+                    </label>
+                    <input
+                      type="password"
+                      value={ownCurrentPin}
+                      onChange={(e) => setOwnCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Updating...' : 'Change Username'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Change Own PIN */}
+              <div className="bg-white border border-stone-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-stone-900 mb-4">Change PIN</h3>
+                <form onSubmit={handleOwnPinChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      Current PIN
+                    </label>
+                    <input
+                      type="password"
+                      value={ownCurrentPin}
+                      onChange={(e) => setOwnCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      New PIN (5 digits)
+                    </label>
+                    <input
+                      type="password"
+                      value={ownNewPin}
+                      onChange={(e) => setOwnNewPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      Confirm New PIN
+                    </label>
+                    <input
+                      type="password"
+                      value={ownConfirmPin}
+                      onChange={(e) => setOwnConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Updating...' : 'Change PIN'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Employee Management Tab */}
+          {activeTab === 'employee' && (
+            <div className="space-y-6">
+              {/* Current Employee Info */}
+              <div className="bg-stone-50 border border-stone-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-stone-900 mb-2">Current Employee</h3>
+                <p className="text-sm text-stone-600">Username: <span className="font-mono">{employeeUsername}</span></p>
+              </div>
+
+              {/* Change Employee Username */}
+              <div className="bg-white border border-stone-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-stone-900 mb-4">Change Employee Username</h3>
+                <form onSubmit={handleEmployeeUsernameChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      New Employee Username
+                    </label>
+                    <input
+                      type="text"
+                      value={empNewUsername}
+                      onChange={(e) => setEmpNewUsername(e.target.value)}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="Enter new employee username"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      Your Admin PIN (for verification)
+                    </label>
+                    <input
+                      type="password"
+                      value={empCurrentPin}
+                      onChange={(e) => setEmpCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Updating...' : 'Change Employee Username'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Change Employee PIN */}
+              <div className="bg-white border border-stone-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-stone-900 mb-4">Change Employee PIN</h3>
+                <form onSubmit={handleEmployeePinChange} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      New Employee PIN (5 digits)
+                    </label>
+                    <input
+                      type="password"
+                      value={empNewPin}
+                      onChange={(e) => setEmpNewPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      Confirm New Employee PIN
+                    </label>
+                    <input
+                      type="password"
+                      value={empConfirmPin}
+                      onChange={(e) => setEmpConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2">
+                      Your Admin PIN (for verification)
+                    </label>
+                    <input
+                      type="password"
+                      value={empCurrentPin}
+                      onChange={(e) => setEmpCurrentPin(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                      className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      placeholder="• • • • •"
+                      maxLength={5}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-amber-600 text-white py-2 px-4 rounded-lg hover:bg-amber-700 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Updating...' : 'Change Employee PIN'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
