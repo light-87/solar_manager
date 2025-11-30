@@ -1,11 +1,11 @@
 # Solar Sales Management System - Project Status & Context
 
 ## 🎯 PROJECT OVERVIEW
-A modern solar sales customer management web application with separate Finance and Cash workflows, 15-step tracking system, role-based access control, and Supabase integration.
+A modern solar sales customer management web application with separate Finance and Cash workflows, 15-step tracking system, role-based access control, multi-deployment support with workspace-based PIN authentication, and Supabase integration.
 
 **Live URL**: [Your Vercel URL]
 **Repository**: light-87/solar_manager
-**Branch**: `claude/solar-sales-management-app-01982wm3k4igiRMG8HX2h3V3`
+**Branch**: `main` (merged from `claude/multi-deployment-pin-auth-014hbFHCK4n1wg8pBSkey6vE`)
 
 ---
 
@@ -20,25 +20,44 @@ A modern solar sales customer management web application with separate Finance a
 - [x] System fonts (switched from Google Fonts for reliability)
 
 ### Authentication & Authorization
-- [x] PIN-based login system (5-digit PINs)
+- [x] **Multi-deployment workspace-based authentication**
+  - Workspace code validation (prevents cross-deployment access)
+  - Username + 5-digit PIN authentication (no PII required)
+  - Plain text PIN storage (5 digits: 00000-99999)
+  - Super admin PIN override (server-side only, works for any account)
+  - Audit logging for super admin access
 - [x] Two user roles: Admin and Employee
 - [x] Role-based access control
 - [x] Protected routes with redirect
-- [x] Auth context provider with localStorage session
-- [x] Secure PIN hashing with bcryptjs
-- [x] PIN management in Settings page (Admin only)
+- [x] Auth context provider with localStorage session (stores role, userId, username)
+- [x] First-time setup flow (creates initial admin and employee accounts)
+- [x] Comprehensive credential management in Settings page
 
 ### API Routes (All Complete)
-- [x] `/api/auth/init` - Initialize default users
-- [x] `/api/auth/login` - PIN authentication
-- [x] `/api/auth/change-pin` - Update user PINs
-- [x] `/api/customers` - GET all customers, POST new customer
-- [x] `/api/customers/[id]` - GET/PUT/DELETE single customer
-- [x] `/api/customers/[id]/steps` - GET/POST step data
-- [x] `/api/stats` - Dashboard statistics
+- [x] **Authentication Routes**
+  - `/api/auth/login` - Workspace + username + PIN authentication (supports super admin override)
+  - `/api/auth/setup-status` - Check if first-time setup is needed
+  - `/api/auth/setup` - Create initial admin and employee accounts
+  - `/api/auth/manage-user` - Change username and PIN (GET/POST for own and employee credentials)
+- [x] **Customer Routes**
+  - `/api/customers` - GET all customers, POST new customer
+  - `/api/customers/[id]` - GET/PUT/DELETE single customer
+  - `/api/customers/[id]/steps` - GET/POST step data
+- [x] **Dashboard Routes**
+  - `/api/stats` - Dashboard statistics
 
 ### User Interface
-- [x] Login page with role selection
+- [x] **Login page** with workspace-based authentication
+  - Workspace code input (validates against environment variable)
+  - Username input (any username)
+  - 5-digit PIN input
+  - Auto-redirect to setup page if no users exist
+  - Displays vendor name from environment variable
+- [x] **First-time setup page** (`/setup`)
+  - Workspace code validation
+  - Create admin account (username + PIN)
+  - Create employee account (username + PIN)
+  - Validation for unique usernames and PINs
 - [x] Dashboard layout with role-based navigation
 - [x] Finance dashboard (accessible to Admin & Employee)
   - Statistics cards (Active, Completed, Archived)
@@ -46,9 +65,18 @@ A modern solar sales customer management web application with separate Finance a
   - Create new customer modal
 - [x] Cash dashboard (Admin only)
   - Same features as Finance but for cash customers
-- [x] Settings page (Admin only)
-  - Change Admin PIN
-  - Change Employee PIN
+- [x] **Settings page** (Admin only) - Completely redesigned
+  - **Workspace Information section**
+    - Display workspace code (read-only)
+    - Display vendor name
+    - Display current username
+  - **My Credentials tab**
+    - Change own username (requires current PIN, auto-logout after change)
+    - Change own PIN (requires current PIN + confirmation)
+  - **Employee Management tab**
+    - View current employee username
+    - Change employee username (requires admin PIN)
+    - Change employee PIN (requires admin PIN)
 - [x] Customer detail page (scaffold)
   - Customer information display
   - Visual progress stepper (15 steps)
@@ -58,24 +86,35 @@ A modern solar sales customer management web application with separate Finance a
 
 ### Database Schema
 - [x] Complete SQL schema in `DATABASE_SCHEMA.md`
-- [x] `users` table - Admin and Employee users
+- [x] **`users` table** - Admin and Employee users
+  - `id` (UUID), `role` (admin/employee), `username` (unique), `pin` (5 digits plain text)
+  - `created_at`, `updated_at` (with auto-update triggers)
+- [x] **`audit_log` table** - Super admin access tracking (NEW)
+  - `id`, `user_id`, `username`, `role`, `action`, `is_super_admin`
+  - `ip_address`, `user_agent`, `created_at`
+  - Indexed for fast audit queries
 - [x] `customers` table - Customer records
 - [x] `step_data` table - Step-by-step progress data
 - [x] Indexes for performance
-- [x] RLS policies
+- [x] RLS policies (enabled on all tables)
 - [x] Triggers for updated_at timestamps
+- [x] **Migration SQL** (`MIGRATION_PIN_AUTH.sql`) - For upgrading existing databases
 
 ### Type Definitions
 - [x] Complete TypeScript types in `types/index.ts`
-- [x] User, Customer, StepData interfaces
+- [x] **User interface** - Updated with username and plain text pin fields
+- [x] **AuditLog interface** - For super admin access tracking (NEW)
+- [x] Customer, StepData interfaces
 - [x] All 15 step data type definitions
 - [x] Dashboard stats types
 
 ### Documentation
 - [x] Comprehensive README.md
 - [x] Database setup guide (DATABASE_SCHEMA.md)
-- [x] Environment variable examples
+- [x] **`.env.example`** - Complete environment variable template (NEW)
+- [x] **`MIGRATION_PIN_AUTH.sql`** - Migration script for existing databases (NEW)
 - [x] Deployment instructions
+- [x] Multi-deployment configuration guide
 
 ### Bug Fixes Applied
 - [x] Next.js 15 dynamic params (Promise handling)
@@ -210,15 +249,20 @@ Each of the 15 steps needs its own form component with specific fields:
 solar_manager/
 ├── app/
 │   ├── api/
-│   │   ├── auth/          # Auth endpoints (✅ Complete)
+│   │   ├── auth/
+│   │   │   ├── login/route.ts        # Workspace + username + PIN auth (✅)
+│   │   │   ├── setup-status/route.ts # Check if setup needed (✅)
+│   │   │   ├── setup/route.ts        # First-time setup (✅)
+│   │   │   └── manage-user/route.ts  # Username/PIN management (✅)
 │   │   ├── customers/     # Customer CRUD (✅ Complete)
 │   │   └── stats/         # Dashboard stats (✅ Complete)
 │   ├── dashboard/
 │   │   ├── page.tsx              # Finance dashboard (✅)
 │   │   ├── cash/page.tsx         # Cash dashboard (✅)
 │   │   ├── customer/[id]/page.tsx # Customer detail (⚠️ Scaffold)
-│   │   └── settings/page.tsx     # Settings (✅)
-│   ├── login/page.tsx     # Login page (✅)
+│   │   └── settings/page.tsx     # Settings - redesigned (✅)
+│   ├── setup/page.tsx     # First-time setup (✅ NEW)
+│   ├── login/page.tsx     # Login - workspace auth (✅)
 │   └── layout.tsx         # Root layout (✅)
 ├── components/
 │   ├── DashboardLayout.tsx    # Main layout (✅)
@@ -226,11 +270,15 @@ solar_manager/
 │   └── steps/                 # ❌ TO CREATE - Step form components
 ├── lib/
 │   ├── supabase.ts           # Supabase client (✅)
-│   ├── auth-context.tsx      # Auth provider (✅)
+│   ├── auth-context.tsx      # Auth provider - stores username (✅)
+│   ├── env.ts                # Env variable validation (✅ NEW)
 │   └── utils.ts              # Utilities (✅)
 ├── types/
 │   └── index.ts              # TypeScript types (✅)
+├── .env.example              # Environment variable template (✅ NEW)
+├── MIGRATION_PIN_AUTH.sql    # Database migration script (✅ NEW)
 ├── DATABASE_SCHEMA.md        # DB setup guide (✅)
+├── PROJECT_STATUS.md         # This file (✅)
 └── README.md                 # Documentation (✅)
 ```
 
@@ -238,29 +286,47 @@ solar_manager/
 
 ## 🔧 CURRENT TECHNICAL CONFIGURATION
 
-### Environment Variables (Vercel)
-- `NEXT_PUBLIC_SUPABASE_URL` - Set via Supabase integration ✅
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Set via Supabase integration ✅
-- `BLOB_READ_WRITE_TOKEN` - ❌ Not yet configured (needed for file uploads)
+### Environment Variables (Required for Each Deployment)
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL (unique per deployment) ✅
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key (unique per deployment) ✅
+- `BLOB_READ_WRITE_TOKEN` - Vercel Blob storage token (unique per deployment) ⚠️ Not yet used
+- **`NEXT_PUBLIC_WORKSPACE_CODE`** - Unique workspace identifier (e.g., "SOLAR2024") ✅ **NEW**
+- **`NEXT_PUBLIC_VENDOR_NAME`** - Vendor display name (e.g., "Solar Vendor 1") ✅ **NEW**
+- **`SUPER_ADMIN_PIN`** - 5-digit master PIN for system owner access (server-side only) ✅ **NEW**
 
-### Default User Credentials
-- **Admin PIN**: `12345` (⚠️ Should be changed in production)
-- **Employee PIN**: `54321` (⚠️ Should be changed in production)
+### Multi-Deployment Configuration
+- Same codebase deployed multiple times
+- Each deployment has unique environment variables
+- Each deployment connects to separate Supabase database
+- Each deployment has unique workspace code for isolation
+- Super admin PIN can be same across deployments (for system owner)
+
+### Authentication Setup
+- **First-time setup**: Auto-detects empty database and redirects to `/setup`
+- **Default credentials** (only via first-time setup):
+  - Admin: username=`admin`, PIN=`12345` (example - set during setup)
+  - Employee: username=`employee`, PIN=`54321` (example - set during setup)
+- **Super admin access**: Use `SUPER_ADMIN_PIN` with any username to login
+- **No PII required**: Only username and PIN (no email, phone, personal information)
 
 ### Database Tables (Supabase)
-1. `users` - User authentication
-2. `customers` - Customer records
-3. `step_data` - Step progress data (JSONB)
+1. `users` - User authentication (username, pin, role)
+2. `audit_log` - Super admin access tracking **NEW**
+3. `customers` - Customer records
+4. `step_data` - Step progress data (JSONB)
 
 ### Key Dependencies
-- Next.js 15
-- React 19
+- Next.js 16.0.4
+- React 19.2.0
 - TypeScript 5
 - Tailwind CSS 4
 - Supabase (PostgreSQL)
-- bcryptjs (password hashing)
 - jspdf + jspdf-autotable (PDF generation - installed but not used yet)
 - @vercel/blob (file storage - installed but not configured)
+
+**Removed Dependencies** (from multi-deployment update):
+- ~~bcryptjs~~ - No longer needed (plain text PIN storage)
+- ~~@types/bcryptjs~~ - No longer needed
 
 ---
 
@@ -316,16 +382,40 @@ solar_manager/
 
 ## 💡 IMPORTANT NOTES FOR NEXT SESSION
 
+### Authentication System (Multi-Deployment)
+- **Workspace-based authentication**: Each deployment has unique `NEXT_PUBLIC_WORKSPACE_CODE`
+- **Username + PIN login**: No role selection anymore - login with username + PIN
+- **Super admin access**: `SUPER_ADMIN_PIN` works as override for any account (server-side only)
+- **First-time setup**: Auto-redirects to `/setup` if no users exist in database
+- **No PII required**: System only needs username and PIN (no email, phone, personal info)
+- **Audit logging**: All super admin access is logged in `audit_log` table with IP and user agent
+
+### Environment Variables (Critical)
+- Must set `NEXT_PUBLIC_WORKSPACE_CODE` for each deployment
+- Must set `SUPER_ADMIN_PIN` (server-side only, 5 digits)
+- Optional: `NEXT_PUBLIC_VENDOR_NAME` for branding
+- Supabase credentials are required (no fallback values)
+- Each deployment should have separate Supabase database
+
 ### Code Context
-- All API routes use Next.js 15 async params (`await params`)
+- All API routes use Next.js 16 async params (`await params`)
 - Client components use `React.use()` for params
-- Supabase client has placeholder defaults for build compatibility
+- Supabase client throws error if env vars missing (no placeholder defaults)
 - Protected routes require authentication check
+- Auth context now stores: `{role, userId, username}` in localStorage
+- Environment variable helpers in `lib/env.ts`
 
 ### File Locations to Remember
-- Step form components should go in: `components/steps/Step[1-15].tsx`
-- Upload logic: `app/api/upload/route.ts`
-- Step data is saved via: `POST /api/customers/[id]/steps`
+- **Authentication**:
+  - Login: `app/login/page.tsx` (workspace + username + PIN)
+  - Setup: `app/setup/page.tsx` (first-time account creation)
+  - Manage user: `app/api/auth/manage-user/route.ts` (username/PIN changes)
+  - Environment helpers: `lib/env.ts`
+- **Step forms** (pending implementation):
+  - Should go in: `components/steps/Step[1-15].tsx`
+  - Upload logic: `app/api/upload/route.ts`
+  - Step data is saved via: `POST /api/customers/[id]/steps`
+- **Settings**: `app/dashboard/settings/page.tsx` (redesigned with tabs)
 
 ### Design Guidelines
 - Color scheme: Amber (#d97706) primary, Stone for neutrals
@@ -334,7 +424,7 @@ solar_manager/
 - Inputs: `border-stone-300 focus:ring-amber-600`
 
 ### Business Logic
-- Cash customers skip Steps 3 and 14
+- Cash customers skip Steps 3, 13, and 14
 - Step 5 has different fields for Finance vs Cash
 - Step 15 auto-completes for Cash if full payment in Step 5
 - Customer marked "completed" when Step 15 is done
@@ -344,40 +434,56 @@ solar_manager/
 ## 📋 CONTEXT PROMPT FOR NEXT CHAT
 
 ```
-I'm working on a Solar Sales Management System built with Next.js 15, TypeScript,
-Tailwind CSS, and Supabase. The app is deployed on Vercel and working.
+I'm working on a Solar Sales Management System built with Next.js 16, TypeScript,
+Tailwind CSS, and Supabase. The app is deployed on Vercel with multi-deployment
+support using workspace-based authentication.
 
 CURRENT STATUS:
-✅ COMPLETE: Authentication, API routes, dashboards, database, Vercel deployment
+✅ COMPLETE: Multi-deployment auth system, workspace codes, API routes, dashboards,
+   database schema with audit logging, first-time setup flow, settings page redesign
 ⚠️ IN PROGRESS: Customer detail page has scaffold but needs step form implementation
 
 WHAT I NEED HELP WITH:
 [Describe your specific request - e.g., "Implement Step 1 form with file upload"]
 
 KEY CONTEXT:
-- 15-step workflow (Finance or Cash type)
-- Step data stored in Supabase `step_data` table (JSONB column)
-- Files upload to Vercel Blob storage (not yet configured)
-- Cash customers skip steps 3 and 14
-- Customer detail page: app/dashboard/customer/[id]/page.tsx
-- Step forms go in: components/steps/
+- **Multi-deployment architecture**: Same codebase, different workspaces
+- **Authentication**: Workspace code + username + 5-digit PIN (no PII required)
+- **Super admin access**: SUPER_ADMIN_PIN works as override for any account
+- **15-step workflow**: Finance or Cash customer types
+- **Step data**: Stored in Supabase `step_data` table (JSONB column)
+- **Files**: Upload to Vercel Blob storage (not yet configured)
+- **Cash customers**: Skip steps 3, 13, and 14
 
 IMPORTANT FILES:
-- types/index.ts - Complete TypeScript definitions for all 15 steps
-- DATABASE_SCHEMA.md - Full database schema
+- .env.example - Required environment variables for deployment
+- MIGRATION_PIN_AUTH.sql - Database migration for existing deployments
+- lib/env.ts - Environment variable helpers and validation
+- types/index.ts - Complete TypeScript definitions (User, AuditLog, all 15 steps)
+- DATABASE_SCHEMA.md - Full database schema (users, audit_log, customers, step_data)
 - README.md - Complete project documentation
 - PROJECT_STATUS.md - This file (what's done/pending)
 
 TECHNICAL NOTES:
-- Next.js 15 async params (await in API, React.use() in client)
+- Next.js 16 async params (await in API, React.use() in client)
+- No hardcoded credentials (throws error if env vars missing)
 - Amber/stone color scheme throughout
 - Protected routes with role-based access (Admin/Employee)
-- Default PINs: Admin=12345, Employee=54321
+- Auth context stores: {role, userId, username}
+- Plain text PIN storage (5 digits: 00000-99999)
+- Audit logging for super admin access
+
+DEPLOYMENT:
+- Set NEXT_PUBLIC_WORKSPACE_CODE for each deployment (unique identifier)
+- Set SUPER_ADMIN_PIN (5 digits, server-side only)
+- Set NEXT_PUBLIC_VENDOR_NAME (optional, for branding)
+- Each deployment connects to separate Supabase database
+- First-time setup creates initial admin and employee accounts
 ```
 
 ---
 
 **Created**: November 25, 2025
-**Last Updated**: November 25, 2025
-**Status**: ✅ Production (Deployed on Vercel)
-**Completion**: ~70% (Core complete, forms pending)
+**Last Updated**: November 30, 2025
+**Status**: ✅ Production (Deployed on Vercel with Multi-Deployment Support)
+**Completion**: ~75% (Core complete, multi-deployment auth complete, step forms pending)
