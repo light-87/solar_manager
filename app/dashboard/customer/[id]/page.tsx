@@ -126,50 +126,104 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
     const stepData = getStepData(selectedStep);
 
-    const stepProps = {
-      customer,
-      stepData,
-      onSave: (data: any) => handleSaveStep(selectedStep, data),
-    };
-
-    const step1Props = {
-      ...stepProps,
-      onUpdateCustomer: handleUpdateCustomer,
-    };
-
     switch (selectedStep) {
       case 1:
-        return <Step1 {...step1Props} />;
+        return <Step1
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+          onUpdateCustomer={handleUpdateCustomer}
+        />;
       case 2:
-        return <Step2 {...stepProps} />;
+        return <Step2
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 3:
-        return <Step3 {...stepProps} />;
+        return <Step3
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 4:
-        return <Step4 {...stepProps} />;
+        return <Step4
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 5:
-        return <Step5 {...stepProps} />;
+        return <Step5
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 6:
-        return <Step6 {...stepProps} />;
+        return <Step6
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 7:
-        return <Step7 {...stepProps} />;
+        return <Step7
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 8:
-        return <Step8 {...stepProps} />;
+        return <Step8
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 9:
-        return <Step9 {...stepProps} />;
+        return <Step9
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 10:
-        return <Step10 {...stepProps} />;
+        return <Step10
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 11:
-        return <Step11 {...stepProps} />;
+        return <Step11
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 12:
-        return <Step12 {...stepProps} />;
+        return <Step12
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 13:
-        return <Step13 {...stepProps} />;
+        return <Step13
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 14:
-        return <Step14 {...stepProps} />;
+        return <Step14
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 15:
-        return <Step15 {...stepProps} />;
+        return <Step15
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       case 16:
-        return <Step16 {...stepProps} />;
+        return <Step16
+          customer={customer}
+          stepData={stepData as any}
+          onSave={(data: any) => handleSaveStep(selectedStep, data)}
+        />;
       default:
         return <div>Invalid step</div>;
     }
