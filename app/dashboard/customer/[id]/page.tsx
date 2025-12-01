@@ -578,50 +578,48 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             <h3 className="font-semibold text-stone-900 mb-4">
               Progress: Step {customer.current_step} of 16
             </h3>
-            <div className="overflow-x-auto">
-              <div className="flex gap-2 min-w-max pb-4">
-                {Array.from({ length: 16 }, (_, i) => i + 1).map((step) => {
-                  const completed = step < customer.current_step;
-                  const current = step === customer.current_step;
+            <div className="grid grid-cols-8 gap-2">
+              {Array.from({ length: 16 }, (_, i) => i + 1).map((step) => {
+                const completed = step < customer.current_step;
+                const current = step === customer.current_step;
 
-                  return (
-                    <button
-                      key={step}
-                      onClick={() => setSelectedStep(step)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all min-w-[120px] ${
-                        selectedStep === step
-                          ? 'border-amber-600 bg-amber-50'
-                          : completed
-                          ? 'border-green-600 bg-green-50'
+                return (
+                  <button
+                    key={step}
+                    onClick={() => setSelectedStep(step)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      selectedStep === step
+                        ? 'border-amber-600 bg-amber-50'
+                        : completed
+                        ? 'border-green-600 bg-green-50'
+                        : current
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-stone-300 hover:border-stone-400'
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center font-semibold text-xs ${
+                        completed
+                          ? 'bg-green-600 text-white'
                           : current
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-stone-300 hover:border-stone-400'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-stone-200 text-stone-600'
                       }`}
                     >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                          completed
-                            ? 'bg-green-600 text-white'
-                            : current
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-stone-200 text-stone-600'
-                        }`}
-                      >
-                        {completed ? (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          step
-                        )}
-                      </div>
-                      <span className="text-xs text-center font-medium text-stone-700">
-                        {getStepName(step)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                      {completed ? (
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        step
+                      )}
+                    </div>
+                    <span className="text-[10px] text-center font-medium text-stone-700 leading-tight">
+                      {getStepName(step).split(' ').slice(0, 2).join(' ')}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
