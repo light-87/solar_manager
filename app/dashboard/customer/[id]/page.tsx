@@ -320,7 +320,33 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     }
   };
 
-  const handleDownloadSelected = () => {
+  const downloadFile = async (url: string, fileName: string) => {
+    try {
+      // Fetch the file as a blob
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      // Create a blob URL
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      alert(`Failed to download ${fileName}`);
+    }
+  };
+
+  const handleDownloadSelected = async () => {
     const docs = allDocuments.filter((_, i) => selectedDocuments.has(i));
 
     if (docs.length === 0) {
@@ -329,27 +355,25 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     }
 
     // Download each file one by one
-    docs.forEach((doc, index) => {
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = doc.url;
+    for (let i = 0; i < docs.length; i++) {
+      const doc = docs[i];
 
-        // Create a better filename with customer name
-        const fileExtension = doc.url.split('.').pop()?.split('?')[0] || 'file';
-        const sanitizedCustomerName = customer?.name.replace(/[^a-zA-Z0-9]/g, '_') || 'customer';
-        const sanitizedDocName = doc.name.replace(/[^a-zA-Z0-9]/g, '_');
-        link.download = `${sanitizedCustomerName}_${sanitizedDocName}.${fileExtension}`;
+      // Create a better filename with customer name
+      const fileExtension = doc.url.split('.').pop()?.split('?')[0] || 'file';
+      const sanitizedCustomerName = customer?.name.replace(/[^a-zA-Z0-9]/g, '_') || 'customer';
+      const sanitizedDocName = doc.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${sanitizedCustomerName}_${sanitizedDocName}.${fileExtension}`;
 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }, index * 500); // Stagger downloads by 500ms to avoid browser blocking
-    });
+      await downloadFile(doc.url, fileName);
+
+      // Wait before next download
+      if (i < docs.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
 
     // Clear selection after download
-    setTimeout(() => {
-      setSelectedDocuments(new Set());
-    }, docs.length * 500 + 500);
+    setSelectedDocuments(new Set());
   };
 
   if (loading) {
@@ -571,15 +595,18 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                         <p className="text-xs text-stone-500">From Step {doc.step}: {getStepName(doc.step)}</p>
                       </div>
                     </div>
-                    <a
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download
+                    <button
+                      onClick={() => {
+                        const fileExtension = doc.url.split('.').pop()?.split('?')[0] || 'file';
+                        const sanitizedCustomerName = customer?.name.replace(/[^a-zA-Z0-9]/g, '_') || 'customer';
+                        const sanitizedDocName = doc.name.replace(/[^a-zA-Z0-9]/g, '_');
+                        const fileName = `${sanitizedCustomerName}_${sanitizedDocName}.${fileExtension}`;
+                        downloadFile(doc.url, fileName);
+                      }}
                       className="px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 text-sm rounded-lg transition-colors flex-shrink-0"
                     >
                       Download
-                    </a>
+                    </button>
                   </div>
                 ))}
               </div>
