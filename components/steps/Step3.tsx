@@ -11,8 +11,14 @@ interface Step3Props {
 }
 
 export default function Step3({ customer, stepData, onSave }: Step3Props) {
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState<Step3Data>({
     online_submitted: stepData?.online_submitted || 'no',
+    completion_date: stepData?.completion_date || getTodayDate(),
     bank_name: stepData?.bank_name || '',
     branch_name: stepData?.branch_name || '',
     jan_samarth: stepData?.jan_samarth || '',
@@ -59,6 +65,16 @@ export default function Step3({ customer, stepData, onSave }: Step3Props) {
   return (
     <div className="space-y-6">
       <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">
+          Completion Date
+        </label>
+        <input
+          type="date"
+          value={formData.completion_date}
+          onChange={(e) => setFormData({ ...formData, completion_date: e.target.value })}
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none mb-4"
+        />
+
         <label className="block text-sm font-medium text-stone-700 mb-2">
           Online Submitted *
         </label>

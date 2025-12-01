@@ -133,11 +133,72 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     setSavingNotes(true);
     try {
       await handleUpdateCustomer({ notes });
-      alert('Notes saved successfully!');
+      // Silent save - no notification
     } catch (error) {
-      alert('Failed to save notes');
+      console.error('Failed to save notes:', error);
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const handleDownloadReport = () => {
+    if (!customer) return;
+
+    // Generate report content
+    const reportContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Customer Report - ${customer.name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; }
+          h1 { color: #333; }
+          h2 { color: #666; margin-top: 30px; }
+          .info-grid { display: grid; grid-template-columns: 200px 1fr; gap: 10px; margin: 20px 0; }
+          .info-label { font-weight: bold; }
+          .step { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+          @media print { button { display: none; } }
+        </style>
+      </head>
+      <body>
+        <h1>Customer Report</h1>
+        <h2>Customer Information</h2>
+        <div class="info-grid">
+          <div class="info-label">Name:</div><div>${customer.name}</div>
+          <div class="info-label">Email:</div><div>${customer.email || 'N/A'}</div>
+          <div class="info-label">Phone:</div><div>${customer.phone}</div>
+          <div class="info-label">Type:</div><div>${customer.type === 'finance' ? 'Finance' : 'Cash'}</div>
+          <div class="info-label">Status:</div><div>${customer.status}</div>
+          <div class="info-label">KW Capacity:</div><div>${customer.kw_capacity || 'N/A'} kW</div>
+          <div class="info-label">Quotation:</div><div>₹${customer.quotation?.toLocaleString('en-IN') || 'N/A'}</div>
+          <div class="info-label">Current Step:</div><div>${customer.current_step} of 16</div>
+          <div class="info-label">Created:</div><div>${formatDate(customer.created_at)}</div>
+        </div>
+        ${customer.address ? `<div class="info-grid"><div class="info-label">Address:</div><div>${customer.address}</div></div>` : ''}
+
+        <h2>Step Progress</h2>
+        ${steps.map(step => `
+          <div class="step">
+            <h3>Step ${step.step_number}: ${getStepName(step.step_number)}</h3>
+            <div><strong>Last Updated:</strong> ${formatDate(step.updated_at)}</div>
+            ${step.completed_at ? `<div><strong>Completed:</strong> ${formatDate(step.completed_at)}</div>` : ''}
+            <div style="margin-top: 10px;"><strong>Data:</strong></div>
+            <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto;">${JSON.stringify(step.data, null, 2)}</pre>
+          </div>
+        `).join('')}
+
+        ${notes ? `<h2>Notes</h2><div style="white-space: pre-wrap; padding: 15px; background: #f5f5f5; border-radius: 8px;">${notes}</div>` : ''}
+
+        <button onclick="window.print()" style="margin-top: 30px; padding: 10px 20px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer;">Print Report</button>
+      </body>
+      </html>
+    `;
+
+    // Open in new window
+    const reportWindow = window.open('', '_blank');
+    if (reportWindow) {
+      reportWindow.document.write(reportContent);
+      reportWindow.document.close();
     }
   };
 
@@ -456,7 +517,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </p>
             </div>
             <div className="flex gap-3">
-              <button className="px-4 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50">
+              <button
+                onClick={handleDownloadReport}
+                className="px-4 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 transition-colors"
+              >
                 Download Report
               </button>
             </div>

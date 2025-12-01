@@ -159,7 +159,7 @@ export default function Step1({ customer, stepData, onSave, onUpdateCustomer }: 
               type="number"
               step="0.01"
               min="0"
-              value={formData.kw_capacity}
+              value={formData.kw_capacity || ''}
               onChange={(e) => setFormData({ ...formData, kw_capacity: parseFloat(e.target.value) || 0 })}
               className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
             />
@@ -173,7 +173,7 @@ export default function Step1({ customer, stepData, onSave, onUpdateCustomer }: 
               type="number"
               step="0.01"
               min="0"
-              value={formData.quotation}
+              value={formData.quotation || ''}
               onChange={(e) => setFormData({ ...formData, quotation: parseFloat(e.target.value) || 0 })}
               className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
             />

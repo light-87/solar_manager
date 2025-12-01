@@ -76,7 +76,7 @@ export default function Step16({ customer, stepData, onSave }: Step16Props) {
           type="number"
           step="0.01"
           min="0"
-          value={formData.amount}
+          value={formData.amount || ''}
           onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
           placeholder="Enter amount"
           className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
