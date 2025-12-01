@@ -31,6 +31,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [selectedStep, setSelectedStep] = useState(1);
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -301,6 +302,56 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     return documents;
   };
 
+  const handleSelectDocument = (index: number) => {
+    const newSelected = new Set(selectedDocuments);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedDocuments(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedDocuments.size === allDocuments.length) {
+      setSelectedDocuments(new Set());
+    } else {
+      setSelectedDocuments(new Set(allDocuments.map((_, i) => i)));
+    }
+  };
+
+  const handleDownloadSelected = () => {
+    const docs = allDocuments.filter((_, i) => selectedDocuments.has(i));
+
+    if (docs.length === 0) {
+      alert('Please select at least one document to download');
+      return;
+    }
+
+    // Download each file one by one
+    docs.forEach((doc, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = doc.url;
+
+        // Create a better filename with customer name
+        const fileExtension = doc.url.split('.').pop()?.split('?')[0] || 'file';
+        const sanitizedCustomerName = customer?.name.replace(/[^a-zA-Z0-9]/g, '_') || 'customer';
+        const sanitizedDocName = doc.name.replace(/[^a-zA-Z0-9]/g, '_');
+        link.download = `${sanitizedCustomerName}_${sanitizedDocName}.${fileExtension}`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }, index * 500); // Stagger downloads by 500ms to avoid browser blocking
+    });
+
+    // Clear selection after download
+    setTimeout(() => {
+      setSelectedDocuments(new Set());
+    }, docs.length * 500 + 500);
+  };
+
   if (loading) {
     return (
       <ProtectedRoute>
@@ -475,7 +526,27 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
           {/* Documents Section */}
           <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <h3 className="font-semibold text-stone-900 mb-4">All Documents</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-stone-900">All Documents</h3>
+              {allDocuments.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSelectAll}
+                    className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                  >
+                    {selectedDocuments.size === allDocuments.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <button
+                    onClick={handleDownloadSelected}
+                    disabled={selectedDocuments.size === 0}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-stone-300 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+                  >
+                    Download Selected ({selectedDocuments.size})
+                  </button>
+                </div>
+              )}
+            </div>
+
             {allDocuments.length === 0 ? (
               <p className="text-stone-500 text-center py-8">No documents uploaded yet</p>
             ) : (
@@ -485,11 +556,17 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     key={index}
                     className="flex items-center justify-between p-3 border border-stone-300 rounded-lg hover:bg-stone-50"
                   >
-                    <div className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-stone-600" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="flex items-center gap-3 flex-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocuments.has(index)}
+                        onChange={() => handleSelectDocument(index)}
+                        className="w-4 h-4 text-amber-600 focus:ring-amber-600 rounded"
+                      />
+                      <svg className="w-5 h-5 text-stone-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                       </svg>
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-medium text-stone-900">{doc.name}</p>
                         <p className="text-xs text-stone-500">From Step {doc.step}: {getStepName(doc.step)}</p>
                       </div>
@@ -499,7 +576,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                       target="_blank"
                       rel="noopener noreferrer"
                       download
-                      className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg transition-colors"
+                      className="px-3 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 text-sm rounded-lg transition-colors flex-shrink-0"
                     >
                       Download
                     </a>
