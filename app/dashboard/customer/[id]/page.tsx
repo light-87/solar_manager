@@ -76,11 +76,35 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         throw new Error('Failed to save step');
       }
 
-      // Refresh step data
-      await fetchCustomerData();
+      // Just update the steps data without resetting the selected step
+      const stepsRes = await fetch(`/api/customers/${id}/steps`);
+      const stepsData = await stepsRes.json();
+      setSteps(stepsData.steps || []);
     } catch (error) {
       console.error('Error saving step:', error);
       throw error;
+    }
+  };
+
+  const handleNextStep = async () => {
+    if (selectedStep < 16) {
+      const nextStep = selectedStep + 1;
+
+      // Update customer's current_step in the database
+      await handleUpdateCustomer({ current_step: nextStep });
+
+      // Move to next step
+      setSelectedStep(nextStep);
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (selectedStep > 1) {
+      setSelectedStep(selectedStep - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -546,6 +570,27 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             </div>
 
             {renderStepComponent()}
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-stone-200">
+              <button
+                onClick={handlePreviousStep}
+                disabled={selectedStep === 1}
+                className="px-6 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Previous Step
+              </button>
+              <div className="text-sm text-stone-600">
+                Step {selectedStep} of 16
+              </div>
+              <button
+                onClick={handleNextStep}
+                disabled={selectedStep === 16}
+                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {selectedStep === 16 ? 'Completed' : 'Next Step →'}
+              </button>
+            </div>
           </div>
 
           {/* Documents Section */}
