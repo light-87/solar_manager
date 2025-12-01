@@ -11,7 +11,7 @@ interface Step16Props {
 }
 
 export default function Step16({ customer, stepData, onSave }: Step16Props) {
-  const { role } = useAuth();
+  const { userRole } = useAuth();
   const [formData, setFormData] = useState<Step16Data>({
     amount: stepData?.amount || 0,
     payment_date: stepData?.payment_date || '',
@@ -53,7 +53,7 @@ export default function Step16({ customer, stepData, onSave }: Step16Props) {
 
   // For Cash customers, only Admin can see amounts
   const isCash = customer.type === 'cash';
-  const isEmployee = role === 'employee';
+  const isEmployee = userRole === 'employee';
   const hideForEmployee = isCash && isEmployee;
 
   if (hideForEmployee) {

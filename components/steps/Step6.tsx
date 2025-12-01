@@ -11,7 +11,7 @@ interface Step6Props {
 }
 
 export default function Step6({ customer, stepData, onSave }: Step6Props) {
-  const { role } = useAuth();
+  const { userRole } = useAuth();
   const [formData, setFormData] = useState<Step6Data>({
     amount: stepData?.amount || 0,
     remaining_amount: stepData?.remaining_amount || 0,
@@ -60,7 +60,7 @@ export default function Step6({ customer, stepData, onSave }: Step6Props) {
 
   // For Cash customers, only Admin can see amounts
   const isCash = customer.type === 'cash';
-  const isEmployee = role === 'employee';
+  const isEmployee = userRole === 'employee';
   const hideForEmployee = isCash && isEmployee;
 
   if (hideForEmployee) {
