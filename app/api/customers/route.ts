@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, address, type } = body;
+    const { name, email, phone, address, type, kw_capacity, quotation } = body;
 
     if (!name || !phone || !type) {
       return NextResponse.json(
@@ -69,6 +69,8 @@ export async function POST(request: Request) {
           phone,
           address,
           type,
+          kw_capacity: kw_capacity ? parseFloat(kw_capacity) : null,
+          quotation: quotation ? parseFloat(quotation) : null,
           status: 'active',
           current_step: 1,
         },

@@ -334,6 +334,8 @@ function NewCustomerModal({
     email: '',
     phone: '',
     address: '',
+    kw_capacity: '',
+    quotation: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -432,6 +434,40 @@ function NewCustomerModal({
               rows={3}
               className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none resize-none"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">
+                KW Capacity *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={formData.kw_capacity}
+                onChange={(e) => setFormData({ ...formData, kw_capacity: e.target.value })}
+                placeholder="e.g., 5.5"
+                className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1">
+                Quotation (₹) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={formData.quotation}
+                onChange={(e) => setFormData({ ...formData, quotation: e.target.value })}
+                placeholder="e.g., 250000"
+                className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
+              />
+            </div>
           </div>
 
           {error && (

@@ -33,6 +33,9 @@ export interface Customer {
   type: CustomerType;
   status: CustomerStatus;
   current_step: number;
+  kw_capacity?: number;
+  quotation?: number;
+  site_location?: string;
   created_at: string;
   updated_at: string;
   notes?: string;
@@ -43,129 +46,142 @@ export interface StepData {
   customer_id: string;
   step_number: number;
   data: Record<string, any>;
+  completed_at?: string;
   updated_at: string;
 }
 
 // Step 1: Details & Documents
 export interface Step1Data {
+  // Pre-filled customer data (editable except name, email, phone)
+  address?: string;
+  site_location?: string;
+  kw_capacity?: number;
+  quotation?: number;
+  commercial_domestic?: 'commercial' | 'domestic';
+  // Document uploads
   aadhaar_card?: string; // File URL
-  electricity_bill?: string; // File URL
-  ration_card?: string; // File URL
-  other_documents?: string[]; // Array of file URLs
-  created_on: string;
+  pan_card?: string; // File URL
+  electric_bill?: string; // File URL
+  bank_passbook?: string[]; // Array of file URLs (multiple)
 }
 
-// Step 2: Online Application
+// Step 2: Site Selection
 export interface Step2Data {
-  status: 'filled' | 'pending';
-  updated_on: string;
+  selected_site?: 'site_a' | 'site_b' | 'site_c';
+  status: 'filled' | 'not_filled';
 }
 
-// Step 3: Submit to Bank (Finance only)
+// Step 3: Online Application
 export interface Step3Data {
-  bank_name: string;
-  status: 'submitted' | 'not_submitted';
-  updated_on: string;
+  online_submitted: 'yes' | 'no';
+  bank_name?: string; // For finance only
+  branch_name?: string; // For finance only
+  jan_samarth?: string; // File URL
+  acknowledgment?: string; // File URL
 }
 
-// Step 4: Bank Call Verification (Finance only)
+// Step 4: Submit to Bank
 export interface Step4Data {
-  status: 'done' | 'pending';
-  updated_on: string;
+  submitted_to_bank: 'yes' | 'no';
 }
 
-// Step 5: 1st Disbursement / Payment (Finance) or Payment Type (Cash)
-export interface Step5DataFinance {
-  amount_received: number;
-  updated_on: string;
+// Step 5: Bank Verification
+export interface Step5Data {
+  bank_verification: 'done' | 'no';
 }
 
-export interface Step5DataCash {
-  payment_type: 'advance' | 'full';
-  amount: number;
-  updated_on: string;
-}
-
-// Step 6: Material Supplier
+// Step 6: 1st Disbursement (Admin only for Cash)
 export interface Step6Data {
-  solar_panels: boolean;
-  inverter: boolean;
-  mounting_structure: boolean;
-  wiring_cables: boolean;
-  junction_box: boolean;
-  battery: boolean;
-  other_materials: boolean;
-  updated_on: string;
+  amount: number;
+  remaining_amount?: number; // Calculated: quotation - amount
 }
 
-// Step 7: Installation
+// Step 7: Materials List
 export interface Step7Data {
-  structure_installation: boolean;
-  wiring_installation: boolean;
-  updated_on: string;
+  materials: {
+    [key: string]: boolean; // Checklist items
+  };
 }
 
-// Step 8: File Completion
+// Step 8: Installation
 export interface Step8Data {
-  installation_photos?: string[]; // Array of file URLs
-  system_photos?: string[]; // Array of file URLs
-  barcode_number: string;
-  meter_number: string;
-  inverter_number: string;
-  panel_number: string;
-  system_kw_capacity: number;
-  status: 'ready' | 'not_ready';
-  updated_on: string;
+  structure: {
+    status: 'done' | 'no';
+    team_name?: string;
+  };
+  wiring: {
+    status: 'done' | 'no';
+    team_name?: string;
+  };
 }
 
-// Step 9: Print & Submit Online
+// Equipment item interface
+export interface EquipmentItem {
+  serial_number: string;
+  dcr_ndcr: 'dcr' | 'ndcr';
+  maker: string;
+  capacity: number;
+  invoice_date: string;
+}
+
+// Step 9: Completion Details
 export interface Step9Data {
-  status: 'done' | 'not_done';
-  updated_on: string;
+  completion_file: 'complete' | 'no';
+  panel: {
+    count: number;
+    items: EquipmentItem[];
+  };
+  inverter: {
+    count: number;
+    items: EquipmentItem[];
+  };
+  gps_photo?: string; // File URL
 }
 
-// Step 10: MSEB Inspection
+// Step 10: Document Uploads
 export interface Step10Data {
-  status: 'done' | 'pending';
-  updated_on: string;
+  completion_file?: string; // File URL
+  net_agreement?: string; // File URL
+  model_agreement?: string; // File URL
+  dcr_ndcr_certificate?: string; // File URL
+  print_sign_upload_done: 'done' | 'no';
 }
 
-// Step 11: MSEB Meter Release
+// Step 11: MSEB Inspection
 export interface Step11Data {
-  status: 'done' | 'no';
-  updated_on: string;
+  mseb_inspection: 'done' | 'no';
+  inspector_name?: string;
+  inspection_date?: string;
 }
 
-// Step 12: Meter Installation
+// Step 12: Meter Release
 export interface Step12Data {
-  status: 'done' | 'no';
-  updated_on: string;
+  meter_release_date?: string;
+  upload_status: 'done' | 'not';
 }
 
-// Step 13: Mail Bank (Finance only)
+// Step 13: Meter Installation
 export interface Step13Data {
   status: 'done' | 'no';
-  updated_on: string;
+  installer_name?: string;
+  installation_date?: string;
 }
 
-// Step 14: Bank Inspection (Finance only)
+// Step 14: Mail Bank
 export interface Step14Data {
-  status: 'done' | 'no';
-  updated_on: string;
+  mail_sent: 'done' | 'no';
 }
 
-// Step 15: Final Disbursement (Finance) or Final Payment (Cash)
-export interface Step15DataFinance {
-  amount_received: number;
-  status: 'done' | 'no';
-  updated_on: string;
+// Step 15: Bank Inspection
+export interface Step15Data {
+  inspector_name?: string;
+  inspection_date?: string;
 }
 
-export interface Step15DataCash {
-  amount?: number;
-  status: 'done' | 'no';
-  updated_on: string;
-  auto_completed?: boolean; // Set if full payment was made in Step 5
+// Step 16: Final Disbursement (Admin only for Cash)
+export interface Step16Data {
+  amount: number;
+  payment_date?: string;
 }
 
 export interface DashboardStats {

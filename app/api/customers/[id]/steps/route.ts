@@ -59,7 +59,10 @@ export async function POST(
       // Update existing step
       const { data: updatedData, error } = await supabase
         .from('step_data')
-        .update({ data })
+        .update({
+          data,
+          completed_at: new Date().toISOString()
+        })
         .eq('customer_id', id)
         .eq('step_number', step_number)
         .select()
@@ -79,6 +82,7 @@ export async function POST(
             customer_id: id,
             step_number,
             data,
+            completed_at: new Date().toISOString()
           },
         ])
         .select()

@@ -43,7 +43,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, email, phone, address, status, current_step, notes } = body;
+    const { name, email, phone, address, status, current_step, notes, kw_capacity, quotation, site_location } = body;
 
     const updates: any = {};
     if (name !== undefined) updates.name = name;
@@ -53,6 +53,9 @@ export async function PUT(
     if (status !== undefined) updates.status = status;
     if (current_step !== undefined) updates.current_step = current_step;
     if (notes !== undefined) updates.notes = notes;
+    if (kw_capacity !== undefined) updates.kw_capacity = kw_capacity ? parseFloat(kw_capacity) : null;
+    if (quotation !== undefined) updates.quotation = quotation ? parseFloat(quotation) : null;
+    if (site_location !== undefined) updates.site_location = site_location;
 
     const { data, error } = await supabase
       .from('customers')

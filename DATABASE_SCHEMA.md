@@ -32,7 +32,10 @@ CREATE TABLE customers (
   address TEXT,
   type TEXT NOT NULL CHECK (type IN ('finance', 'cash')),
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
-  current_step INTEGER NOT NULL DEFAULT 1 CHECK (current_step >= 1 AND current_step <= 15),
+  current_step INTEGER NOT NULL DEFAULT 1 CHECK (current_step >= 1 AND current_step <= 20),
+  kw_capacity DECIMAL(10, 2),
+  quotation DECIMAL(12, 2),
+  site_location TEXT,
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -43,6 +46,7 @@ CREATE INDEX idx_customers_name ON customers(name);
 CREATE INDEX idx_customers_status ON customers(status);
 CREATE INDEX idx_customers_type ON customers(type);
 CREATE INDEX idx_customers_current_step ON customers(current_step);
+CREATE INDEX idx_customers_kw_capacity ON customers(kw_capacity);
 ```
 
 ## 3. Step Data Table
@@ -51,8 +55,9 @@ CREATE INDEX idx_customers_current_step ON customers(current_step);
 CREATE TABLE step_data (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-  step_number INTEGER NOT NULL CHECK (step_number >= 1 AND step_number <= 15),
+  step_number INTEGER NOT NULL CHECK (step_number >= 1 AND step_number <= 20),
   data JSONB NOT NULL DEFAULT '{}',
+  completed_at TIMESTAMP WITH TIME ZONE,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(customer_id, step_number)
 );
