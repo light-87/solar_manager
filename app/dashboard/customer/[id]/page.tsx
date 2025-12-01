@@ -98,6 +98,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
       // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (selectedStep === 16) {
+      // Mark customer as completed when on step 16
+      await handleUpdateCustomer({ status: 'completed' });
+      // Optionally refresh data to show updated status
+      await fetchCustomerData();
     }
   };
 
@@ -647,10 +652,13 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </div>
               <button
                 onClick={handleNextStep}
-                disabled={selectedStep === 16}
-                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className={`px-6 py-2 rounded-lg transition-colors ${
+                  selectedStep === 16
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white'
+                }`}
               >
-                {selectedStep === 16 ? 'Completed' : 'Next Step →'}
+                {selectedStep === 16 ? 'Mark as Completed ✓' : 'Next Step →'}
               </button>
             </div>
           </div>
