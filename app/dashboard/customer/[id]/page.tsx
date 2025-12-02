@@ -225,7 +225,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             if (data.panel.items && data.panel.items.length > 0) {
               html += '<ul style="margin: 5px 0; padding-left: 20px;">';
               data.panel.items.forEach((item: any, i: number) => {
-                html += `<li>Panel ${i + 1}: ${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})</li>`;
+                html += `<li>
+                  <strong>Panel ${i + 1}:</strong> ${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})<br/>
+                  <span style="color: #666; font-size: 0.9em;">Serial No: ${item.serial_number || 'N/A'} | Invoice Date: ${item.invoice_date || 'N/A'}</span>
+                </li>`;
               });
               html += '</ul>';
             }
@@ -235,7 +238,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             if (data.inverter.items && data.inverter.items.length > 0) {
               html += '<ul style="margin: 5px 0; padding-left: 20px;">';
               data.inverter.items.forEach((item: any, i: number) => {
-                html += `<li>Inverter ${i + 1}: ${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})</li>`;
+                html += `<li>
+                  <strong>Inverter ${i + 1}:</strong> ${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})<br/>
+                  <span style="color: #666; font-size: 0.9em;">Serial No: ${item.serial_number || 'N/A'} | Invoice Date: ${item.invoice_date || 'N/A'}</span>
+                </li>`;
               });
               html += '</ul>';
             }
@@ -712,13 +718,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               <div>
                 <p className="text-sm text-stone-600">Status</p>
                 <span
-                  className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${
-                    customer.status === 'active'
-                      ? 'bg-blue-100 text-blue-800'
-                      : customer.status === 'completed'
+                  className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${customer.status === 'active'
+                    ? 'bg-blue-100 text-blue-800'
+                    : customer.status === 'completed'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-stone-100 text-stone-800'
-                  }`}
+                    }`}
                 >
                   {customer.status}
                 </span>
@@ -732,147 +737,183 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             )}
           </div>
 
-          {/* Progress Timeline */}
-          <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-stone-900">
-                Installation Progress
-              </h3>
-              <div className="text-sm">
-                <span className={`px-3 py-1 rounded-full font-medium ${
-                  customer.status === 'completed'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {customer.status === 'completed' ? '✓ Completed' : `Step ${customer.current_step} of 16`}
-                </span>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            {/* Left Sidebar - Step Navigation */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="bg-white rounded-lg border border-stone-200 overflow-hidden sticky top-6">
+                <div className="p-4 border-b border-stone-100 bg-stone-50">
+                  <h3 className="font-semibold text-stone-900">Installation Steps</h3>
+                  <p className="text-xs text-stone-500 mt-1">
+                    {Math.round(((customer.current_step - 1) / 15) * 100)}% Complete
+                  </p>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-stone-200 rounded-full h-1.5 mt-2">
+                    <div
+                      className="bg-green-500 h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${((customer.current_step - 1) / 15) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+                  {Array.from({ length: 16 }, (_, i) => i + 1).map((step) => {
+                    const completed = step < customer.current_step;
+                    const current = step === customer.current_step;
+                    const active = selectedStep === step;
+
+                    return (
+                      <button
+                        key={step}
+                        onClick={() => {
+                          setSelectedStep(step);
+                          // On mobile, scroll to content
+                          if (window.innerWidth < 1024) {
+                            document.getElementById('step-content')?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className={`w-full text-left px-4 py-3 border-b border-stone-100 last:border-0 flex items-center gap-3 transition-colors ${active
+                          ? 'bg-amber-50 border-l-4 border-l-amber-600'
+                          : 'hover:bg-stone-50 border-l-4 border-l-transparent'
+                          }`}
+                      >
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${completed
+                          ? 'bg-green-100 text-green-700'
+                          : current
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-stone-100 text-stone-500'
+                          }`}>
+                          {completed ? (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            step
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${active ? 'text-amber-900' : 'text-stone-700'
+                            }`}>
+                            {getStepName(step)}
+                          </p>
+                          <p className="text-xs text-stone-500 truncate">
+                            {completed ? 'Completed' : current ? 'In Progress' : 'Pending'}
+                          </p>
+                        </div>
+                        {active && (
+                          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Quick Jump Buttons */}
-            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-              {Array.from({ length: 16 }, (_, i) => i + 1).map((step) => {
-                const completed = step < customer.current_step;
-                const current = step === customer.current_step;
+            {/* Right Content - Active Step */}
+            <div className="lg:col-span-9" id="step-content">
+              <div className="bg-white rounded-lg border border-stone-200 shadow-sm min-h-[500px]">
+                {/* Step Header */}
+                <div className="border-b border-stone-100 p-6 flex items-center justify-between bg-stone-50/50 rounded-t-lg">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold tracking-wider text-stone-500 uppercase">
+                        Step {selectedStep}
+                      </span>
+                      {selectedStep < customer.current_step && (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                          Completed
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-xl font-bold text-stone-900">
+                      {getStepName(selectedStep)}
+                    </h2>
+                  </div>
 
-                return (
-                  <button
-                    key={step}
-                    onClick={() => setSelectedStep(step)}
-                    title={`Step ${step}: ${getStepName(step)}`}
-                    className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all ${
-                      selectedStep === step
-                        ? 'bg-amber-600 text-white ring-4 ring-amber-200 scale-110'
-                        : completed
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : current
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
-                    }`}
-                  >
-                    {completed ? (
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePreviousStep}
+                      disabled={selectedStep === 1}
+                      className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg disabled:opacity-30 transition-colors"
+                      title="Previous Step"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                    ) : (
-                      step
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                    <button
+                      onClick={handleNextStep}
+                      disabled={selectedStep > customer.current_step}
+                      className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg disabled:opacity-30 transition-colors"
+                      title="Next Step"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
 
-            {/* Current Step Display */}
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                  {selectedStep}
+                {/* Step Content */}
+                <div className="p-6">
+                  {renderStepComponent()}
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-stone-900">{getStepName(selectedStep)}</h4>
-                  <p className="text-sm text-stone-600">Currently viewing this step</p>
-                </div>
-                <div className="flex gap-2">
+
+                {/* Footer Navigation */}
+                <div className="border-t border-stone-100 p-6 bg-stone-50/30 rounded-b-lg flex justify-between items-center">
                   <button
                     onClick={handlePreviousStep}
                     disabled={selectedStep === 1}
-                    className="p-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Previous Step"
+                    className="px-4 py-2 text-stone-600 hover:text-stone-900 disabled:opacity-50 transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
+                    Previous
                   </button>
-                  <button
-                    onClick={handleNextStep}
-                    disabled={selectedStep === 16 && customer.status === 'completed'}
-                    className="p-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    title="Next Step"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+
+                  {selectedStep === customer.current_step && (
+                    selectedStep < 16 ? (
+                      <button
+                        onClick={handleNextStep}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        Complete & Next
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleNextStep}
+                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        Mark as Completed
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                    )
+                  )}
+
+                  {customer.status === 'completed' && (
+                    <div className="px-6 py-2 bg-green-100 text-green-800 rounded-lg flex items-center gap-2 font-medium">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Customer Completed
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Step Content */}
-          <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-stone-900">
-                Step {selectedStep}: {getStepName(selectedStep)}
-              </h3>
-            </div>
 
-            {renderStepComponent()}
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-stone-200">
-              <button
-                onClick={handlePreviousStep}
-                disabled={selectedStep === 1}
-                className="px-6 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Previous
-              </button>
-              <div className="text-sm text-stone-600">
-                Step {selectedStep} of 16
-              </div>
-              {customer.status === 'completed' ? (
-                <div className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Customer Completed
-                </div>
-              ) : selectedStep === 16 ? (
-                <button
-                  onClick={handleNextStep}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Mark as Completed
-                </button>
-              ) : (
-                <button
-                  onClick={handleNextStep}
-                  className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-2"
-                >
-                  Next
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* Documents Section */}
           <div className="bg-white rounded-lg border border-stone-200 p-6">
