@@ -149,209 +149,252 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const handleDownloadReport = () => {
     if (!customer) return;
 
-    // Helper to format step data nicely
-    const formatStepData = (stepNumber: number, data: any) => {
-      if (!data || Object.keys(data).length === 0) return '<p style="color: #999;">No data entered yet</p>';
+    // Helper to generate table rows
+    const generateRows = () => {
+      let rows = '';
 
-      let html = '<div style="margin-top: 10px;">';
+      // Helper for adding a section header
+      const addSectionHeader = (title: string) => {
+        rows += `
+          <tr class="section-header">
+            <th colspan="2">${title}</th>
+          </tr>
+        `;
+      };
 
-      switch (stepNumber) {
-        case 1:
-          if (data.address) html += `<p><strong>Address:</strong> ${data.address}</p>`;
-          if (data.site_location) html += `<p><strong>Site Location:</strong> <a href="${data.site_location}" target="_blank">View on Map</a></p>`;
-          if (data.kw_capacity) html += `<p><strong>KW Capacity:</strong> ${data.kw_capacity} kW</p>`;
-          if (data.quotation) html += `<p><strong>Quotation:</strong> ₹${data.quotation.toLocaleString('en-IN')}</p>`;
-          if (data.commercial_domestic) html += `<p><strong>Type:</strong> ${data.commercial_domestic === 'commercial' ? 'Commercial' : 'Domestic'}</p>`;
-          break;
+      // Helper for adding a data row
+      const addRow = (field: string, value: string | number | undefined | null) => {
+        if (value === undefined || value === null || value === '') return;
+        rows += `
+          <tr>
+            <td class="field">${field}</td>
+            <td class="value">${value}</td>
+          </tr>
+        `;
+      };
 
-        case 2:
-          if (data.selected_site) html += `<p><strong>Selected Site:</strong> ${data.selected_site.replace('_', ' ').toUpperCase()}</p>`;
-          if (data.status) html += `<p><strong>Status:</strong> ${data.status === 'filled' ? 'Filled' : 'Not Filled'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          break;
+      // --- Customer Information ---
+      addSectionHeader('Customer Information');
+      addRow('Name', customer.name);
+      addRow('Phone', customer.phone);
+      addRow('Email', customer.email);
+      addRow('Address', customer.address);
+      addRow('Type', customer.type === 'finance' ? 'Finance' : 'Cash');
+      addRow('Status', customer.status.toUpperCase());
+      addRow('KW Capacity', customer.kw_capacity ? `${customer.kw_capacity} kW` : '');
+      addRow('Quotation', customer.quotation ? `₹${customer.quotation.toLocaleString('en-IN')}` : '');
+      addRow('Created Date', formatDate(customer.created_at));
 
-        case 3:
-          if (data.online_submitted) html += `<p><strong>Online Submitted:</strong> ${data.online_submitted === 'yes' ? 'Yes' : 'No'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          if (data.bank_name) html += `<p><strong>Bank Name:</strong> ${data.bank_name}</p>`;
-          if (data.branch_name) html += `<p><strong>Branch Name:</strong> ${data.branch_name}</p>`;
-          break;
+      // --- Site Details ---
+      let hasSiteDetails = false;
+      const step1 = steps.find(s => s.step_number === 1)?.data;
+      const step2 = steps.find(s => s.step_number === 2)?.data;
 
-        case 4:
-          if (data.submitted_to_bank) html += `<p><strong>Submitted to Bank:</strong> ${data.submitted_to_bank === 'yes' ? 'Yes' : 'No'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          break;
-
-        case 5:
-          if (data.bank_verification) html += `<p><strong>Bank Verification:</strong> ${data.bank_verification === 'done' ? 'Done' : 'No'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          break;
-
-        case 6:
-          if (data.amount !== undefined) html += `<p><strong>1st Disbursement:</strong> ₹${data.amount.toLocaleString('en-IN')}</p>`;
-          if (data.remaining_amount !== undefined) html += `<p><strong>Remaining Amount:</strong> ₹${data.remaining_amount.toLocaleString('en-IN')}</p>`;
-          break;
-
-        case 7:
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          if (data.materials) {
-            html += '<p><strong>Materials:</strong></p><ul style="margin: 5px 0; padding-left: 20px;">';
-            Object.entries(data.materials).forEach(([mat, checked]) => {
-              if (checked) html += `<li>${mat}</li>`;
-            });
-            html += '</ul>';
-          }
-          break;
-
-        case 8:
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          if (data.structure) {
-            html += `<p><strong>Structure Installation:</strong> ${data.structure.status === 'done' ? 'Done' : 'No'}`;
-            if (data.structure.team_name) html += ` (Team: ${data.structure.team_name})`;
-            html += '</p>';
-          }
-          if (data.wiring) {
-            html += `<p><strong>Wiring Installation:</strong> ${data.wiring.status === 'done' ? 'Done' : 'No'}`;
-            if (data.wiring.team_name) html += ` (Team: ${data.wiring.team_name})`;
-            html += '</p>';
-          }
-          break;
-
-        case 9:
-          if (data.completion_file) html += `<p><strong>Completion File:</strong> ${data.completion_file === 'complete' ? 'Complete' : 'No'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          if (data.panel) {
-            html += `<p><strong>Panels:</strong> ${data.panel.count} panel(s)</p>`;
-            if (data.panel.items && data.panel.items.length > 0) {
-              html += '<ul style="margin: 5px 0; padding-left: 20px;">';
-              data.panel.items.forEach((item: any, i: number) => {
-                html += `<li>
-                  <strong>Panel ${i + 1}:</strong> ${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})<br/>
-                  <span style="color: #666; font-size: 0.9em;">Serial No: ${item.serial_number || 'N/A'} | Invoice Date: ${item.invoice_date || 'N/A'}</span>
-                </li>`;
-              });
-              html += '</ul>';
-            }
-          }
-          if (data.inverter) {
-            html += `<p><strong>Inverters:</strong> ${data.inverter.count} inverter(s)</p>`;
-            if (data.inverter.items && data.inverter.items.length > 0) {
-              html += '<ul style="margin: 5px 0; padding-left: 20px;">';
-              data.inverter.items.forEach((item: any, i: number) => {
-                html += `<li>
-                  <strong>Inverter ${i + 1}:</strong> ${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})<br/>
-                  <span style="color: #666; font-size: 0.9em;">Serial No: ${item.serial_number || 'N/A'} | Invoice Date: ${item.invoice_date || 'N/A'}</span>
-                </li>`;
-              });
-              html += '</ul>';
-            }
-          }
-          break;
-
-        case 10:
-          if (data.print_sign_upload_done) html += `<p><strong>Print → Sign → Upload:</strong> ${data.print_sign_upload_done === 'done' ? 'Done' : 'No'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          break;
-
-        case 11:
-          if (data.mseb_inspection) html += `<p><strong>MSEB Inspection:</strong> ${data.mseb_inspection === 'done' ? 'Done' : 'No'}</p>`;
-          if (data.inspector_name) html += `<p><strong>Inspector:</strong> ${data.inspector_name}</p>`;
-          if (data.inspection_date) html += `<p><strong>Inspection Date:</strong> ${data.inspection_date}</p>`;
-          break;
-
-        case 12:
-          if (data.meter_release_date) html += `<p><strong>Meter Release Date:</strong> ${data.meter_release_date}</p>`;
-          if (data.upload_status) html += `<p><strong>Upload Status:</strong> ${data.upload_status === 'done' ? 'Done' : 'Not Done'}</p>`;
-          break;
-
-        case 13:
-          if (data.status) html += `<p><strong>Status:</strong> ${data.status === 'done' ? 'Done' : 'No'}</p>`;
-          if (data.installer_name) html += `<p><strong>Installer:</strong> ${data.installer_name}</p>`;
-          if (data.installation_date) html += `<p><strong>Installation Date:</strong> ${data.installation_date}</p>`;
-          break;
-
-        case 14:
-          if (data.mail_sent) html += `<p><strong>Mail to Bank:</strong> ${data.mail_sent === 'done' ? 'Done' : 'No'}</p>`;
-          if (data.completion_date) html += `<p><strong>Completion Date:</strong> ${data.completion_date}</p>`;
-          break;
-
-        case 15:
-          if (data.inspector_name) html += `<p><strong>Inspector:</strong> ${data.inspector_name}</p>`;
-          if (data.inspection_date) html += `<p><strong>Inspection Date:</strong> ${data.inspection_date}</p>`;
-          break;
-
-        case 16:
-          if (data.amount !== undefined) html += `<p><strong>Final Disbursement:</strong> ₹${data.amount.toLocaleString('en-IN')}</p>`;
-          if (data.payment_date) html += `<p><strong>Payment Date:</strong> ${data.payment_date}</p>`;
-          break;
-
-        default:
-          html += `<pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">${JSON.stringify(data, null, 2)}</pre>`;
+      if ((step1?.site_location) || (step2?.selected_site || step2?.completion_date)) {
+        addSectionHeader('Site Details');
+        if (step1?.site_location) addRow('Google Maps Location', `<a href="${step1.site_location}" target="_blank">View Map</a>`);
+        if (step2?.selected_site) addRow('Selected Site', step2.selected_site.replace('_', ' ').toUpperCase());
+        if (step2?.completion_date) addRow('Selection Date', step2.completion_date);
       }
 
-      html += '</div>';
-      return html;
+      // --- Application & Bank ---
+      const step3 = steps.find(s => s.step_number === 3)?.data;
+      const step4 = steps.find(s => s.step_number === 4)?.data;
+      const step5 = steps.find(s => s.step_number === 5)?.data;
+      const step14 = steps.find(s => s.step_number === 14)?.data;
+
+      if (step3 || step4 || step5 || step14) {
+        let hasBankData = false;
+        // Check if we have any data to show before adding header
+        if ((step3?.online_submitted || step3?.bank_name) || (step4?.submitted_to_bank) || (step5?.bank_verification) || (step14?.mail_sent)) {
+          addSectionHeader('Application & Bank Details');
+
+          if (step3?.online_submitted) addRow('Online Application', step3.online_submitted === 'yes' ? 'Submitted' : 'Pending');
+          if (step3?.bank_name) addRow('Bank Name', step3.bank_name);
+          if (step3?.branch_name) addRow('Branch Name', step3.branch_name);
+          if (step3?.completion_date) addRow('Application Date', step3.completion_date);
+
+          if (step4?.submitted_to_bank) addRow('Submitted to Bank', step4.submitted_to_bank === 'yes' ? 'Yes' : 'No');
+          if (step4?.completion_date) addRow('Submission Date', step4.completion_date);
+
+          if (step5?.bank_verification) addRow('Bank Verification', step5.bank_verification === 'done' ? 'Completed' : 'Pending');
+          if (step5?.completion_date) addRow('Verification Date', step5.completion_date);
+
+          if (step14?.mail_sent) addRow('Mail to Bank', step14.mail_sent === 'done' ? 'Sent' : 'Pending');
+        }
+      }
+
+      // --- Payments ---
+      const step6 = steps.find(s => s.step_number === 6)?.data;
+      const step16 = steps.find(s => s.step_number === 16)?.data;
+
+      if ((step6?.amount) || (step16?.amount)) {
+        addSectionHeader('Payment Information');
+        if (step6?.amount) addRow('1st Disbursement', `₹${step6.amount.toLocaleString('en-IN')}`);
+        if (step6?.remaining_amount) addRow('Remaining Amount', `₹${step6.remaining_amount.toLocaleString('en-IN')}`);
+
+        if (step16?.amount) addRow('Final Disbursement', `₹${step16.amount.toLocaleString('en-IN')}`);
+        if (step16?.payment_date) addRow('Final Payment Date', step16.payment_date);
+      }
+
+      // --- Installation & Materials ---
+      const step7 = steps.find(s => s.step_number === 7)?.data;
+      const step8 = steps.find(s => s.step_number === 8)?.data;
+      const step13 = steps.find(s => s.step_number === 13)?.data;
+
+      if (step7 || step8 || step13) {
+        if ((step7?.materials) || (step8?.structure || step8?.wiring) || (step13?.status)) {
+          addSectionHeader('Installation & Materials');
+
+          if (step7?.materials) {
+            const materialsList = Object.entries(step7.materials)
+              .filter(([_, checked]) => checked)
+              .map(([mat]) => mat)
+              .join(', ');
+            if (materialsList) addRow('Materials Delivered', materialsList);
+            if (step7.completion_date) addRow('Delivery Date', step7.completion_date);
+          }
+
+          if (step8?.structure) {
+            addRow('Structure Installation', step8.structure.status === 'done' ? 'Completed' : 'Pending');
+            if (step8.structure.team_name) addRow('Structure Team', step8.structure.team_name);
+          }
+          if (step8?.wiring) {
+            addRow('Wiring Installation', step8.wiring.status === 'done' ? 'Completed' : 'Pending');
+            if (step8.wiring.team_name) addRow('Wiring Team', step8.wiring.team_name);
+          }
+          if (step8?.completion_date) addRow('Installation Date', step8.completion_date);
+
+          if (step13?.status) addRow('Meter Installation', step13.status === 'done' ? 'Completed' : 'Pending');
+          if (step13?.installer_name) addRow('Meter Installer', step13.installer_name);
+          if (step13?.installation_date) addRow('Meter Install Date', step13.installation_date);
+        }
+      }
+
+      // --- Equipment (Panels & Inverters) ---
+      const step9 = steps.find(s => s.step_number === 9)?.data;
+      if (step9?.panel?.items || step9?.inverter?.items) {
+        addSectionHeader('Equipment Details');
+
+        if (step9.panel?.items) {
+          step9.panel.items.forEach((item: any, i: number) => {
+            addRow(`Panel ${i + 1}`, `${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})`);
+            addRow(`Panel ${i + 1} Serial`, item.serial_number || 'N/A');
+            addRow(`Panel ${i + 1} Invoice`, item.invoice_date || 'N/A');
+          });
+        }
+
+        if (step9.inverter?.items) {
+          step9.inverter.items.forEach((item: any, i: number) => {
+            addRow(`Inverter ${i + 1}`, `${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})`);
+            addRow(`Inverter ${i + 1} Serial`, item.serial_number || 'N/A');
+            addRow(`Inverter ${i + 1} Invoice`, item.invoice_date || 'N/A');
+          });
+        }
+
+        if (step9.completion_date) addRow('Equipment Completion', step9.completion_date);
+      }
+
+      // --- Inspections & Approvals ---
+      const step10 = steps.find(s => s.step_number === 10)?.data;
+      const step11 = steps.find(s => s.step_number === 11)?.data;
+      const step12 = steps.find(s => s.step_number === 12)?.data;
+      const step15 = steps.find(s => s.step_number === 15)?.data;
+
+      if (step10 || step11 || step12 || step15) {
+        if ((step10?.print_sign_upload_done) || (step11?.mseb_inspection) || (step12?.meter_release_date) || (step15?.inspector_name)) {
+          addSectionHeader('Inspections & Approvals');
+
+          if (step10?.print_sign_upload_done) addRow('Print/Sign/Upload', step10.print_sign_upload_done === 'done' ? 'Completed' : 'Pending');
+
+          if (step11?.mseb_inspection) addRow('MSEB Inspection', step11.mseb_inspection === 'done' ? 'Completed' : 'Pending');
+          if (step11?.inspector_name) addRow('MSEB Inspector', step11.inspector_name);
+          if (step11?.inspection_date) addRow('MSEB Inspection Date', step11.inspection_date);
+
+          if (step12?.meter_release_date) addRow('Meter Release Date', step12.meter_release_date);
+          if (step12?.upload_status) addRow('Meter Upload Status', step12.upload_status === 'done' ? 'Completed' : 'Pending');
+
+          if (step15?.inspector_name) addRow('Bank Inspector', step15.inspector_name);
+          if (step15?.inspection_date) addRow('Bank Inspection Date', step15.inspection_date);
+        }
+      }
+
+      // Notes
+      if (notes) {
+        addSectionHeader('Additional Notes');
+        addRow('Notes', notes);
+      }
+
+      return rows;
     };
 
-    // Generate report content
     const reportContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <title>Customer Report - ${customer.name}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; max-width: 1200px; margin: 0 auto; }
-          h1 { color: #333; border-bottom: 3px solid #d97706; padding-bottom: 10px; }
-          h2 { color: #666; margin-top: 30px; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
-          h3 { color: #333; margin: 10px 0 5px 0; }
-          .info-grid { display: grid; grid-template-columns: 200px 1fr; gap: 10px; margin: 20px 0; background: #f9fafb; padding: 20px; border-radius: 8px; }
-          .info-label { font-weight: bold; color: #666; }
-          .step { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-          .step.completed { border-left: 4px solid #16a34a; }
-          .step h3 { margin-top: 0; }
-          .step p { margin: 8px 0; }
-          .step ul { margin: 5px 0; }
-          @media print { button { display: none; } }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; color: #1f2937; background-color: #ffffff; }
+          h1 { text-align: center; color: #d97706; margin-bottom: 10px; font-size: 28px; font-weight: 700; }
+          .meta { text-align: center; color: #6b7280; margin-bottom: 40px; font-size: 14px; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; border: 1px solid #e5e7eb; }
+          
+          th, td { padding: 12px 16px; text-align: left; vertical-align: top; }
+          
+          /* Section Headers */
+          .section-header th { 
+            background-color: #fff7ed; /* Light orange/amber */
+            color: #9a3412; /* Dark orange/amber */
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.05em;
+            border-top: 2px solid #fed7aa;
+            border-bottom: 1px solid #fed7aa;
+            padding-top: 16px;
+            padding-bottom: 8px;
+          }
+          
+          /* Data Rows */
+          tr { border-bottom: 1px solid #f3f4f6; }
+          tr:last-child { border-bottom: none; }
+          
+          .field { 
+            font-weight: 500; 
+            color: #4b5563; 
+            width: 35%; 
+            background-color: #f9fafb;
+            border-right: 1px solid #f3f4f6;
+          }
+          .value { 
+            color: #111827; 
+            width: 65%; 
+          }
+          
+          a { color: #2563eb; text-decoration: none; }
+          a:hover { text-decoration: underline; }
+          
+          @media print { 
+            body { padding: 0; }
+            button { display: none; }
+            .section-header th { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #fff7ed !important; }
+            .field { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #f9fafb !important; }
+          }
         </style>
       </head>
       <body>
-        <h1>Solar Installation Customer Report</h1>
-
-        <h2>Customer Information</h2>
-        <div class="info-grid">
-          <div class="info-label">Name:</div><div>${customer.name}</div>
-          <div class="info-label">Email:</div><div>${customer.email || 'N/A'}</div>
-          <div class="info-label">Phone:</div><div>${customer.phone}</div>
-          <div class="info-label">Type:</div><div>${customer.type === 'finance' ? 'Finance' : 'Cash'}</div>
-          <div class="info-label">Status:</div><div style="color: ${customer.status === 'completed' ? '#16a34a' : customer.status === 'active' ? '#2563eb' : '#6b7280'}; font-weight: bold;">${customer.status.toUpperCase()}</div>
-          <div class="info-label">KW Capacity:</div><div>${customer.kw_capacity || 'N/A'} kW</div>
-          <div class="info-label">Quotation:</div><div>₹${customer.quotation?.toLocaleString('en-IN') || 'N/A'}</div>
-          <div class="info-label">Current Step:</div><div>${customer.current_step} of 16</div>
-          <div class="info-label">Created:</div><div>${formatDate(customer.created_at)}</div>
-        </div>
-        ${customer.address ? `<div class="info-grid"><div class="info-label">Address:</div><div>${customer.address}</div></div>` : ''}
-
-        <h2>Installation Progress (Steps 1-16)</h2>
-        ${steps.map(step => `
-          <div class="step ${step.completed_at ? 'completed' : ''}">
-            <h3>Step ${step.step_number}: ${getStepName(step.step_number)}</h3>
-            <p style="color: #666; font-size: 13px;">
-              <strong>Last Updated:</strong> ${formatDate(step.updated_at)}
-              ${step.completed_at ? ` • <strong style="color: #16a34a;">Completed:</strong> ${formatDate(step.completed_at)}` : ''}
-            </p>
-            ${formatStepData(step.step_number, step.data)}
-          </div>
-        `).join('')}
-
-        ${notes ? `
-          <h2>Additional Notes</h2>
-          <div style="white-space: pre-wrap; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #ddd;">
-            ${notes}
-          </div>
-        ` : ''}
+        <h1>Solar Installation Report</h1>
+        <div class="meta">Generated on ${new Date().toLocaleDateString()}</div>
+        
+        <table>
+          <tbody>
+            ${generateRows()}
+          </tbody>
+        </table>
 
         <div style="text-align: center; margin-top: 40px;">
-          <button onclick="window.print()" style="margin-top: 30px; padding: 12px 30px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 600;">
+          <button onclick="window.print()" style="padding: 12px 24px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
             Print / Save as PDF
           </button>
         </div>
