@@ -39,10 +39,16 @@ export default function FinanceDashboard() {
       setCustomers(allCustomers);
 
       // Calculate stats from all customers
-      const statsData = {
+      const byStep: Record<number, number> = {};
+      for (let i = 1; i <= 16; i++) {
+        byStep[i] = allCustomers.filter((c: Customer) => c.current_step === i).length;
+      }
+
+      const statsData: DashboardStats = {
         total_active: allCustomers.filter((c: Customer) => c.status === 'active').length,
         total_completed: allCustomers.filter((c: Customer) => c.status === 'completed').length,
         total_archived: allCustomers.filter((c: Customer) => c.status === 'archived').length,
+        by_step: byStep,
       };
       setStats(statsData);
 
