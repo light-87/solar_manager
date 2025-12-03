@@ -89,7 +89,29 @@ CREATE INDEX idx_audit_log_is_super_admin ON audit_log(is_super_admin);
 CREATE INDEX idx_audit_log_created_at ON audit_log(created_at);
 ```
 
-## 5. Enable Row Level Security (RLS)
+## 5. Backup Logs Table
+
+```sql
+CREATE TABLE backup_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  customer_name TEXT NOT NULL,
+  performed_by UUID NOT NULL REFERENCES users(id),
+  performed_by_username TEXT NOT NULL,
+  action_type TEXT NOT NULL CHECK (action_type IN ('download', 'cleanup')),
+  storage_freed_bytes BIGINT DEFAULT 0,
+  documents_deleted INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for faster backup log queries
+CREATE INDEX idx_backup_logs_customer_id ON backup_logs(customer_id);
+CREATE INDEX idx_backup_logs_performed_by ON backup_logs(performed_by);
+CREATE INDEX idx_backup_logs_action_type ON backup_logs(action_type);
+CREATE INDEX idx_backup_logs_created_at ON backup_logs(created_at);
+```
+
+## 6. Enable Row Level Security (RLS)
 
 ```sql
 -- Enable RLS on all tables
@@ -97,6 +119,7 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE step_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE backup_logs ENABLE ROW LEVEL SECURITY;
 
 -- For this application, we'll allow all authenticated operations
 -- In production, you might want more granular policies
@@ -104,9 +127,10 @@ CREATE POLICY "Allow all operations for users" ON users FOR ALL USING (true);
 CREATE POLICY "Allow all operations for customers" ON customers FOR ALL USING (true);
 CREATE POLICY "Allow all operations for step_data" ON step_data FOR ALL USING (true);
 CREATE POLICY "Allow all operations for audit_log" ON audit_log FOR ALL USING (true);
+CREATE POLICY "Allow all operations for backup_logs" ON backup_logs FOR ALL USING (true);
 ```
 
-## 6. Create Updated_at Trigger Function
+## 7. Create Updated_at Trigger Function
 
 ```sql
 -- Function to update updated_at timestamp
