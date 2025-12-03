@@ -11,12 +11,18 @@ interface Step10Props {
 }
 
 export default function Step10({ customer, stepData, onSave }: Step10Props) {
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState<Step10Data>({
     completion_file: stepData?.completion_file || '',
     net_agreement: stepData?.net_agreement || '',
     model_agreement: stepData?.model_agreement || '',
     dcr_ndcr_certificate: stepData?.dcr_ndcr_certificate || '',
     print_sign_upload_done: stepData?.print_sign_upload_done || 'no',
+    completion_date: stepData?.completion_date || getTodayDate(),
   });
 
   const [saving, setSaving] = useState(false);
@@ -92,6 +98,16 @@ export default function Step10({ customer, stepData, onSave }: Step10Props) {
       />
 
       <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">
+          Completion Date
+        </label>
+        <input
+          type="date"
+          value={formData.completion_date}
+          onChange={(e) => setFormData({ ...formData, completion_date: e.target.value })}
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none mb-4"
+        />
+
         <label className="block text-sm font-medium text-stone-700 mb-2">
           Print → Sign → Upload (Done/No) *
         </label>

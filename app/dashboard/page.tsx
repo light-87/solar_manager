@@ -269,7 +269,7 @@ export default function FinanceDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-stone-900">
-                            {customer.current_step}/15
+                            {customer.current_step}/16
                           </div>
                           <div className="text-xs text-stone-500">
                             {getStepName(customer.current_step, 'finance')}

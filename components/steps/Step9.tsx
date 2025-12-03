@@ -11,8 +11,14 @@ interface Step9Props {
 }
 
 export default function Step9({ customer, stepData, onSave }: Step9Props) {
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState<Step9Data>({
     completion_file: stepData?.completion_file || 'no',
+    completion_date: stepData?.completion_date || getTodayDate(),
     panel: stepData?.panel || { count: 0, items: [] },
     inverter: stepData?.inverter || { count: 0, items: [] },
     gps_photo: stepData?.gps_photo || '',
@@ -130,6 +136,16 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
     <div className="space-y-6">
       {/* Completion File Status */}
       <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">
+          Completion Date
+        </label>
+        <input
+          type="date"
+          value={formData.completion_date}
+          onChange={(e) => setFormData({ ...formData, completion_date: e.target.value })}
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none mb-4"
+        />
+
         <label className="block text-sm font-medium text-stone-700 mb-2">
           Completion File *
         </label>
@@ -170,7 +186,7 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
           <input
             type="number"
             min="0"
-            value={formData.panel.count}
+            value={formData.panel.count || ''}
             onChange={(e) => setFormData({ ...formData, panel: { ...formData.panel, count: parseInt(e.target.value) || 0 } })}
             className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
           />
@@ -229,7 +245,7 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
                 <label className="block text-xs font-medium text-stone-700 mb-1">Capacity (W)</label>
                 <input
                   type="number"
-                  value={item.capacity}
+                  value={item.capacity || ''}
                   onChange={(e) => updatePanelItem(index, 'capacity', parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
                 />
@@ -259,7 +275,7 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
           <input
             type="number"
             min="0"
-            value={formData.inverter.count}
+            value={formData.inverter.count || ''}
             onChange={(e) => setFormData({ ...formData, inverter: { ...formData.inverter, count: parseInt(e.target.value) || 0 } })}
             className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
           />
@@ -318,7 +334,7 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
                 <label className="block text-xs font-medium text-stone-700 mb-1">Capacity (W)</label>
                 <input
                   type="number"
-                  value={item.capacity}
+                  value={item.capacity || ''}
                   onChange={(e) => updateInverterItem(index, 'capacity', parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
                 />

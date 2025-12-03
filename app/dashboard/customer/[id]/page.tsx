@@ -98,6 +98,11 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
       // Scroll to top
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (selectedStep === 16) {
+      // Mark customer as completed when on step 16
+      await handleUpdateCustomer({ status: 'completed' });
+      // Optionally refresh data to show updated status
+      await fetchCustomerData();
     }
   };
 
@@ -133,11 +138,275 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     setSavingNotes(true);
     try {
       await handleUpdateCustomer({ notes });
-      alert('Notes saved successfully!');
+      // Silent save - no notification
     } catch (error) {
-      alert('Failed to save notes');
+      console.error('Failed to save notes:', error);
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  const handleDownloadReport = () => {
+    if (!customer) return;
+
+    // Helper to generate table rows
+    const generateRows = () => {
+      let rows = '';
+
+      // Helper for adding a section header
+      const addSectionHeader = (title: string) => {
+        rows += `
+          <tr class="section-header">
+            <th colspan="2">${title}</th>
+          </tr>
+        `;
+      };
+
+      // Helper for adding a data row
+      const addRow = (field: string, value: string | number | undefined | null) => {
+        if (value === undefined || value === null || value === '') return;
+        rows += `
+          <tr>
+            <td class="field">${field}</td>
+            <td class="value">${value}</td>
+          </tr>
+        `;
+      };
+
+      // --- Customer Information ---
+      addSectionHeader('Customer Information');
+      addRow('Name', customer.name);
+      addRow('Phone', customer.phone);
+      addRow('Email', customer.email);
+      addRow('Address', customer.address);
+      addRow('Type', customer.type === 'finance' ? 'Finance' : 'Cash');
+      addRow('Status', customer.status.toUpperCase());
+      addRow('KW Capacity', customer.kw_capacity ? `${customer.kw_capacity} kW` : '');
+      addRow('Quotation', customer.quotation ? `₹${customer.quotation.toLocaleString('en-IN')}` : '');
+      addRow('Created Date', formatDate(customer.created_at));
+
+      // --- Site Details ---
+      let hasSiteDetails = false;
+      const step1 = steps.find(s => s.step_number === 1)?.data;
+      const step2 = steps.find(s => s.step_number === 2)?.data;
+
+      if ((step1?.site_location) || (step2?.selected_site || step2?.completion_date)) {
+        addSectionHeader('Site Details');
+        if (step1?.site_location) addRow('Google Maps Location', `<a href="${step1.site_location}" target="_blank">View Map</a>`);
+        if (step2?.selected_site) addRow('Selected Site', step2.selected_site.replace('_', ' ').toUpperCase());
+        if (step2?.completion_date) addRow('Selection Date', step2.completion_date);
+      }
+
+      // --- Application & Bank ---
+      const step3 = steps.find(s => s.step_number === 3)?.data;
+      const step4 = steps.find(s => s.step_number === 4)?.data;
+      const step5 = steps.find(s => s.step_number === 5)?.data;
+      const step14 = steps.find(s => s.step_number === 14)?.data;
+
+      if (step3 || step4 || step5 || step14) {
+        let hasBankData = false;
+        // Check if we have any data to show before adding header
+        if ((step3?.online_submitted || step3?.bank_name) || (step4?.submitted_to_bank) || (step5?.bank_verification) || (step14?.mail_sent)) {
+          addSectionHeader('Application & Bank Details');
+
+          if (step3?.online_submitted) addRow('Online Application', step3.online_submitted === 'yes' ? 'Submitted' : 'Pending');
+          if (step3?.bank_name) addRow('Bank Name', step3.bank_name);
+          if (step3?.branch_name) addRow('Branch Name', step3.branch_name);
+          if (step3?.completion_date) addRow('Application Date', step3.completion_date);
+
+          if (step4?.submitted_to_bank) addRow('Submitted to Bank', step4.submitted_to_bank === 'yes' ? 'Yes' : 'No');
+          if (step4?.completion_date) addRow('Submission Date', step4.completion_date);
+
+          if (step5?.bank_verification) addRow('Bank Verification', step5.bank_verification === 'done' ? 'Completed' : 'Pending');
+          if (step5?.completion_date) addRow('Verification Date', step5.completion_date);
+
+          if (step14?.mail_sent) addRow('Mail to Bank', step14.mail_sent === 'done' ? 'Sent' : 'Pending');
+        }
+      }
+
+      // --- Payments ---
+      const step6 = steps.find(s => s.step_number === 6)?.data;
+      const step16 = steps.find(s => s.step_number === 16)?.data;
+
+      if ((step6?.amount) || (step16?.amount)) {
+        addSectionHeader('Payment Information');
+        if (step6?.amount) addRow('1st Disbursement', `₹${step6.amount.toLocaleString('en-IN')}`);
+        if (step6?.remaining_amount) addRow('Remaining Amount', `₹${step6.remaining_amount.toLocaleString('en-IN')}`);
+
+        if (step16?.amount) addRow('Final Disbursement', `₹${step16.amount.toLocaleString('en-IN')}`);
+        if (step16?.payment_date) addRow('Final Payment Date', step16.payment_date);
+      }
+
+      // --- Installation & Materials ---
+      const step7 = steps.find(s => s.step_number === 7)?.data;
+      const step8 = steps.find(s => s.step_number === 8)?.data;
+      const step13 = steps.find(s => s.step_number === 13)?.data;
+
+      if (step7 || step8 || step13) {
+        if ((step7?.materials) || (step8?.structure || step8?.wiring) || (step13?.status)) {
+          addSectionHeader('Installation & Materials');
+
+          if (step7?.materials) {
+            const materialsList = Object.entries(step7.materials)
+              .filter(([_, checked]) => checked)
+              .map(([mat]) => mat)
+              .join(', ');
+            if (materialsList) addRow('Materials Delivered', materialsList);
+            if (step7.completion_date) addRow('Delivery Date', step7.completion_date);
+          }
+
+          if (step8?.structure) {
+            addRow('Structure Installation', step8.structure.status === 'done' ? 'Completed' : 'Pending');
+            if (step8.structure.team_name) addRow('Structure Team', step8.structure.team_name);
+          }
+          if (step8?.wiring) {
+            addRow('Wiring Installation', step8.wiring.status === 'done' ? 'Completed' : 'Pending');
+            if (step8.wiring.team_name) addRow('Wiring Team', step8.wiring.team_name);
+          }
+          if (step8?.completion_date) addRow('Installation Date', step8.completion_date);
+
+          if (step13?.status) addRow('Meter Installation', step13.status === 'done' ? 'Completed' : 'Pending');
+          if (step13?.installer_name) addRow('Meter Installer', step13.installer_name);
+          if (step13?.installation_date) addRow('Meter Install Date', step13.installation_date);
+        }
+      }
+
+      // --- Equipment (Panels & Inverters) ---
+      const step9 = steps.find(s => s.step_number === 9)?.data;
+      if (step9?.panel?.items || step9?.inverter?.items) {
+        addSectionHeader('Equipment Details');
+
+        if (step9.panel?.items) {
+          step9.panel.items.forEach((item: any, i: number) => {
+            addRow(`Panel ${i + 1}`, `${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})`);
+            addRow(`Panel ${i + 1} Serial`, item.serial_number || 'N/A');
+            addRow(`Panel ${i + 1} Invoice`, item.invoice_date || 'N/A');
+          });
+        }
+
+        if (step9.inverter?.items) {
+          step9.inverter.items.forEach((item: any, i: number) => {
+            addRow(`Inverter ${i + 1}`, `${item.maker || 'N/A'} - ${item.capacity}W (${item.dcr_ndcr?.toUpperCase()})`);
+            addRow(`Inverter ${i + 1} Serial`, item.serial_number || 'N/A');
+            addRow(`Inverter ${i + 1} Invoice`, item.invoice_date || 'N/A');
+          });
+        }
+
+        if (step9.completion_date) addRow('Equipment Completion', step9.completion_date);
+      }
+
+      // --- Inspections & Approvals ---
+      const step10 = steps.find(s => s.step_number === 10)?.data;
+      const step11 = steps.find(s => s.step_number === 11)?.data;
+      const step12 = steps.find(s => s.step_number === 12)?.data;
+      const step15 = steps.find(s => s.step_number === 15)?.data;
+
+      if (step10 || step11 || step12 || step15) {
+        if ((step10?.print_sign_upload_done) || (step11?.mseb_inspection) || (step12?.meter_release_date) || (step15?.inspector_name)) {
+          addSectionHeader('Inspections & Approvals');
+
+          if (step10?.print_sign_upload_done) addRow('Print/Sign/Upload', step10.print_sign_upload_done === 'done' ? 'Completed' : 'Pending');
+
+          if (step11?.mseb_inspection) addRow('MSEB Inspection', step11.mseb_inspection === 'done' ? 'Completed' : 'Pending');
+          if (step11?.inspector_name) addRow('MSEB Inspector', step11.inspector_name);
+          if (step11?.inspection_date) addRow('MSEB Inspection Date', step11.inspection_date);
+
+          if (step12?.meter_release_date) addRow('Meter Release Date', step12.meter_release_date);
+          if (step12?.upload_status) addRow('Meter Upload Status', step12.upload_status === 'done' ? 'Completed' : 'Pending');
+
+          if (step15?.inspector_name) addRow('Bank Inspector', step15.inspector_name);
+          if (step15?.inspection_date) addRow('Bank Inspection Date', step15.inspection_date);
+        }
+      }
+
+      // Notes
+      if (notes) {
+        addSectionHeader('Additional Notes');
+        addRow('Notes', notes);
+      }
+
+      return rows;
+    };
+
+    const reportContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Customer Report - ${customer.name}</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; color: #1f2937; background-color: #ffffff; }
+          h1 { text-align: center; color: #d97706; margin-bottom: 10px; font-size: 28px; font-weight: 700; }
+          .meta { text-align: center; color: #6b7280; margin-bottom: 40px; font-size: 14px; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 14px; border: 1px solid #e5e7eb; }
+          
+          th, td { padding: 12px 16px; text-align: left; vertical-align: top; }
+          
+          /* Section Headers */
+          .section-header th { 
+            background-color: #fff7ed; /* Light orange/amber */
+            color: #9a3412; /* Dark orange/amber */
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.05em;
+            border-top: 2px solid #fed7aa;
+            border-bottom: 1px solid #fed7aa;
+            padding-top: 16px;
+            padding-bottom: 8px;
+          }
+          
+          /* Data Rows */
+          tr { border-bottom: 1px solid #f3f4f6; }
+          tr:last-child { border-bottom: none; }
+          
+          .field { 
+            font-weight: 500; 
+            color: #4b5563; 
+            width: 35%; 
+            background-color: #f9fafb;
+            border-right: 1px solid #f3f4f6;
+          }
+          .value { 
+            color: #111827; 
+            width: 65%; 
+          }
+          
+          a { color: #2563eb; text-decoration: none; }
+          a:hover { text-decoration: underline; }
+          
+          @media print { 
+            body { padding: 0; }
+            button { display: none; }
+            .section-header th { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #fff7ed !important; }
+            .field { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: #f9fafb !important; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Solar Installation Report</h1>
+        <div class="meta">Generated on ${new Date().toLocaleDateString()}</div>
+        
+        <table>
+          <tbody>
+            ${generateRows()}
+          </tbody>
+        </table>
+
+        <div style="text-align: center; margin-top: 40px;">
+          <button onclick="window.print()" style="padding: 12px 24px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            Print / Save as PDF
+          </button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Open in new window
+    const reportWindow = window.open('', '_blank');
+    if (reportWindow) {
+      reportWindow.document.write(reportContent);
+      reportWindow.document.close();
     }
   };
 
@@ -456,7 +725,10 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </p>
             </div>
             <div className="flex gap-3">
-              <button className="px-4 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50">
+              <button
+                onClick={handleDownloadReport}
+                className="px-4 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 transition-colors"
+              >
                 Download Report
               </button>
             </div>
@@ -489,13 +761,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               <div>
                 <p className="text-sm text-stone-600">Status</p>
                 <span
-                  className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${
-                    customer.status === 'active'
-                      ? 'bg-blue-100 text-blue-800'
-                      : customer.status === 'completed'
+                  className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${customer.status === 'active'
+                    ? 'bg-blue-100 text-blue-800'
+                    : customer.status === 'completed'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-stone-100 text-stone-800'
-                  }`}
+                    }`}
                 >
                   {customer.status}
                 </span>
@@ -509,89 +780,183 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             )}
           </div>
 
-          {/* Progress Stepper */}
-          <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <h3 className="font-semibold text-stone-900 mb-4">
-              Progress: Step {customer.current_step} of 16
-            </h3>
-            <div className="overflow-x-auto">
-              <div className="flex gap-2 min-w-max pb-4">
-                {Array.from({ length: 16 }, (_, i) => i + 1).map((step) => {
-                  const completed = step < customer.current_step;
-                  const current = step === customer.current_step;
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-                  return (
-                    <button
-                      key={step}
-                      onClick={() => setSelectedStep(step)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all min-w-[120px] ${
-                        selectedStep === step
-                          ? 'border-amber-600 bg-amber-50'
-                          : completed
-                          ? 'border-green-600 bg-green-50'
-                          : current
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-stone-300 hover:border-stone-400'
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${
-                          completed
-                            ? 'bg-green-600 text-white'
-                            : current
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-stone-200 text-stone-600'
-                        }`}
+            {/* Left Sidebar - Step Navigation */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="bg-white rounded-lg border border-stone-200 overflow-hidden sticky top-6">
+                <div className="p-4 border-b border-stone-100 bg-stone-50">
+                  <h3 className="font-semibold text-stone-900">Installation Steps</h3>
+                  <p className="text-xs text-stone-500 mt-1">
+                    {Math.round(((customer.current_step - 1) / 15) * 100)}% Complete
+                  </p>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-stone-200 rounded-full h-1.5 mt-2">
+                    <div
+                      className="bg-green-500 h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${((customer.current_step - 1) / 15) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+                  {Array.from({ length: 16 }, (_, i) => i + 1).map((step) => {
+                    const completed = step < customer.current_step;
+                    const current = step === customer.current_step;
+                    const active = selectedStep === step;
+
+                    return (
+                      <button
+                        key={step}
+                        onClick={() => {
+                          setSelectedStep(step);
+                          // On mobile, scroll to content
+                          if (window.innerWidth < 1024) {
+                            document.getElementById('step-content')?.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className={`w-full text-left px-4 py-3 border-b border-stone-100 last:border-0 flex items-center gap-3 transition-colors ${active
+                          ? 'bg-amber-50 border-l-4 border-l-amber-600'
+                          : 'hover:bg-stone-50 border-l-4 border-l-transparent'
+                          }`}
                       >
-                        {completed ? (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${completed
+                          ? 'bg-green-100 text-green-700'
+                          : current
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-stone-100 text-stone-500'
+                          }`}>
+                          {completed ? (
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            step
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium truncate ${active ? 'text-amber-900' : 'text-stone-700'
+                            }`}>
+                            {getStepName(step)}
+                          </p>
+                          <p className="text-xs text-stone-500 truncate">
+                            {completed ? 'Completed' : current ? 'In Progress' : 'Pending'}
+                          </p>
+                        </div>
+                        {active && (
+                          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
-                        ) : (
-                          step
                         )}
-                      </div>
-                      <span className="text-xs text-center font-medium text-stone-700">
-                        {getStepName(step)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Content - Active Step */}
+            <div className="lg:col-span-9" id="step-content">
+              <div className="bg-white rounded-lg border border-stone-200 shadow-sm min-h-[500px]">
+                {/* Step Header */}
+                <div className="border-b border-stone-100 p-6 flex items-center justify-between bg-stone-50/50 rounded-t-lg">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold tracking-wider text-stone-500 uppercase">
+                        Step {selectedStep}
                       </span>
+                      {selectedStep < customer.current_step && (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                          Completed
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="text-xl font-bold text-stone-900">
+                      {getStepName(selectedStep)}
+                    </h2>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePreviousStep}
+                      disabled={selectedStep === 1}
+                      className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg disabled:opacity-30 transition-colors"
+                      title="Previous Step"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
                     </button>
-                  );
-                })}
+                    <button
+                      onClick={handleNextStep}
+                      disabled={selectedStep > customer.current_step}
+                      className="p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 rounded-lg disabled:opacity-30 transition-colors"
+                      title="Next Step"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step Content */}
+                <div className="p-6">
+                  {renderStepComponent()}
+                </div>
+
+                {/* Footer Navigation */}
+                <div className="border-t border-stone-100 p-6 bg-stone-50/30 rounded-b-lg flex justify-between items-center">
+                  <button
+                    onClick={handlePreviousStep}
+                    disabled={selectedStep === 1}
+                    className="px-4 py-2 text-stone-600 hover:text-stone-900 disabled:opacity-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
+                  </button>
+
+                  {selectedStep === customer.current_step && (
+                    selectedStep < 16 ? (
+                      <button
+                        onClick={handleNextStep}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        Complete & Next
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleNextStep}
+                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        Mark as Completed
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                    )
+                  )}
+
+                  {customer.status === 'completed' && (
+                    <div className="px-6 py-2 bg-green-100 text-green-800 rounded-lg flex items-center gap-2 font-medium">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Customer Completed
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Step Content */}
-          <div className="bg-white rounded-lg border border-stone-200 p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-stone-900">
-                Step {selectedStep}: {getStepName(selectedStep)}
-              </h3>
-            </div>
 
-            {renderStepComponent()}
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-stone-200">
-              <button
-                onClick={handlePreviousStep}
-                disabled={selectedStep === 1}
-                className="px-6 py-2 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                ← Previous Step
-              </button>
-              <div className="text-sm text-stone-600">
-                Step {selectedStep} of 16
-              </div>
-              <button
-                onClick={handleNextStep}
-                disabled={selectedStep === 16}
-                className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {selectedStep === 16 ? 'Completed' : 'Next Step →'}
-              </button>
-            </div>
-          </div>
 
           {/* Documents Section */}
           <div className="bg-white rounded-lg border border-stone-200 p-6">

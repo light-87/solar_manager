@@ -69,11 +69,13 @@ export interface Step1Data {
 export interface Step2Data {
   selected_site?: 'site_a' | 'site_b' | 'site_c';
   status: 'filled' | 'not_filled';
+  completion_date?: string;
 }
 
 // Step 3: Online Application
 export interface Step3Data {
   online_submitted: 'yes' | 'no';
+  completion_date?: string;
   bank_name?: string; // For finance only
   branch_name?: string; // For finance only
   jan_samarth?: string; // File URL
@@ -83,11 +85,13 @@ export interface Step3Data {
 // Step 4: Submit to Bank
 export interface Step4Data {
   submitted_to_bank: 'yes' | 'no';
+  completion_date?: string;
 }
 
 // Step 5: Bank Verification
 export interface Step5Data {
   bank_verification: 'done' | 'no';
+  completion_date?: string;
 }
 
 // Step 6: 1st Disbursement (Admin only for Cash)
@@ -101,6 +105,7 @@ export interface Step7Data {
   materials: {
     [key: string]: boolean; // Checklist items
   };
+  completion_date?: string;
 }
 
 // Step 8: Installation
@@ -113,6 +118,7 @@ export interface Step8Data {
     status: 'done' | 'no';
     team_name?: string;
   };
+  completion_date?: string;
 }
 
 // Equipment item interface
@@ -127,6 +133,7 @@ export interface EquipmentItem {
 // Step 9: Completion Details
 export interface Step9Data {
   completion_file: 'complete' | 'no';
+  completion_date?: string;
   panel: {
     count: number;
     items: EquipmentItem[];
@@ -145,6 +152,7 @@ export interface Step10Data {
   model_agreement?: string; // File URL
   dcr_ndcr_certificate?: string; // File URL
   print_sign_upload_done: 'done' | 'no';
+  completion_date?: string;
 }
 
 // Step 11: MSEB Inspection
@@ -170,6 +178,7 @@ export interface Step13Data {
 // Step 14: Mail Bank
 export interface Step14Data {
   mail_sent: 'done' | 'no';
+  completion_date?: string;
 }
 
 // Step 15: Bank Inspection

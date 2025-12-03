@@ -10,9 +10,15 @@ interface Step8Props {
 }
 
 export default function Step8({ customer, stepData, onSave }: Step8Props) {
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState<Step8Data>({
     structure: stepData?.structure || { status: 'no', team_name: '' },
     wiring: stepData?.wiring || { status: 'no', team_name: '' },
+    completion_date: stepData?.completion_date || getTodayDate(),
   });
 
   const [saving, setSaving] = useState(false);
@@ -51,6 +57,18 @@ export default function Step8({ customer, stepData, onSave }: Step8Props) {
 
   return (
     <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">
+          Completion Date
+        </label>
+        <input
+          type="date"
+          value={formData.completion_date}
+          onChange={(e) => setFormData({ ...formData, completion_date: e.target.value })}
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
+        />
+      </div>
+
       {/* Structure Installation */}
       <div className="border border-stone-300 rounded-lg p-4">
         <h4 className="font-semibold text-stone-900 mb-3">Structure Installation</h4>
