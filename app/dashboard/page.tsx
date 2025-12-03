@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Customer, DashboardStats } from '@/types';
+import { Customer, DashboardStats, CustomerType } from '@/types';
 import { formatDate, getStepName } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 
 export default function FinanceDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -15,8 +16,11 @@ export default function FinanceDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [stepFilter, setStepFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerType, setNewCustomerType] = useState<CustomerType>('finance');
   const router = useRouter();
+  const { userRole } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -24,19 +28,24 @@ export default function FinanceDashboard() {
 
   useEffect(() => {
     filterCustomers();
-  }, [customers, searchQuery, statusFilter, stepFilter]);
+  }, [customers, searchQuery, statusFilter, stepFilter, typeFilter]);
 
   const fetchData = async () => {
     try {
-      // Fetch stats
-      const statsRes = await fetch('/api/stats?type=finance');
-      const statsData = await statsRes.json();
-      setStats(statsData.stats);
-
-      // Fetch customers
-      const customersRes = await fetch('/api/customers?type=finance');
+      // Fetch all customers (both finance and cash)
+      const customersRes = await fetch('/api/customers');
       const customersData = await customersRes.json();
-      setCustomers(customersData.customers || []);
+      const allCustomers = customersData.customers || [];
+      setCustomers(allCustomers);
+
+      // Calculate stats from all customers
+      const statsData = {
+        total_active: allCustomers.filter((c: Customer) => c.status === 'active').length,
+        total_completed: allCustomers.filter((c: Customer) => c.status === 'completed').length,
+        total_archived: allCustomers.filter((c: Customer) => c.status === 'archived').length,
+      };
+      setStats(statsData);
+
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -46,6 +55,11 @@ export default function FinanceDashboard() {
 
   const filterCustomers = () => {
     let filtered = customers;
+
+    // Type filter
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((c) => c.type === typeFilter);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -91,18 +105,34 @@ export default function FinanceDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-semibold text-stone-900">
-                Finance Customers
+                All Customers
               </h2>
               <p className="text-stone-600 mt-1">
-                Manage your finance-based solar installations
+                Manage your solar installations
               </p>
             </div>
-            <button
-              onClick={() => setShowNewCustomerModal(true)}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
-            >
-              + New Customer
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setNewCustomerType('finance');
+                  setShowNewCustomerModal(true);
+                }}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
+              >
+                + Finance Customer
+              </button>
+              {userRole === 'admin' && (
+                <button
+                  onClick={() => {
+                    setNewCustomerType('cash');
+                    setShowNewCustomerModal(true);
+                  }}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  + Cash Customer
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -174,7 +204,22 @@ export default function FinanceDashboard() {
 
           {/* Filters */}
           <div className="bg-white rounded-lg border border-stone-200 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-2">
+                  Customer Type
+                </label>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
+                >
+                  <option value="all">All Types</option>
+                  <option value="finance">Finance</option>
+                  <option value="cash">Cash</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-2">
                   Search by name
@@ -214,7 +259,7 @@ export default function FinanceDashboard() {
                   className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
                 >
                   <option value="all">All Steps</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((step) => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((step) => (
                     <option key={step} value={step}>
                       Step {step}: {getStepName(step, 'finance')}
                     </option>
@@ -234,6 +279,9 @@ export default function FinanceDashboard() {
                       Customer Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                       Current Step
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
@@ -250,7 +298,7 @@ export default function FinanceDashboard() {
                 <tbody className="divide-y divide-stone-200">
                   {filteredCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-stone-500">
+                      <td colSpan={6} className="px-6 py-12 text-center text-stone-500">
                         No customers found. Click "New Customer" to add one.
                       </td>
                     </tr>
@@ -268,11 +316,22 @@ export default function FinanceDashboard() {
                           <div className="text-sm text-stone-500">{customer.phone}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              customer.type === 'finance'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {customer.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-stone-900">
                             {customer.current_step}/16
                           </div>
                           <div className="text-xs text-stone-500">
-                            {getStepName(customer.current_step, 'finance')}
+                            {getStepName(customer.current_step, customer.type)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
@@ -306,7 +365,7 @@ export default function FinanceDashboard() {
         {/* New Customer Modal */}
         {showNewCustomerModal && (
           <NewCustomerModal
-            type="finance"
+            type={newCustomerType}
             onClose={() => setShowNewCustomerModal(false)}
             onSuccess={() => {
               setShowNewCustomerModal(false);
