@@ -49,7 +49,8 @@ export function getStepName(stepNumber: number, customerType: 'finance' | 'cash'
 
 export function isStepSkipped(stepNumber: number, customerType: 'finance' | 'cash'): boolean {
   if (customerType === 'cash') {
-    return stepNumber === 3 || stepNumber === 14;
+    // Skip all bank-related steps for cash customers
+    return [3, 4, 5, 14, 15].includes(stepNumber);
   }
   return false;
 }

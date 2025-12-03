@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Customer, StepData } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, isStepSkipped } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
 import Step1 from '@/components/steps/Step1';
 import Step2 from '@/components/steps/Step2';
 import Step3 from '@/components/steps/Step3';
@@ -33,6 +34,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [savingNotes, setSavingNotes] = useState(false);
   const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set());
   const router = useRouter();
+  const { userRole } = useAuth();
 
   useEffect(() => {
     fetchCustomerData();
@@ -88,7 +90,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const handleNextStep = async () => {
     if (selectedStep < 16) {
-      const nextStep = selectedStep + 1;
+      let nextStep = selectedStep + 1;
+
+      // Skip any steps that should be skipped for this customer type
+      while (nextStep <= 16 && isStepSkipped(nextStep, customer!.type)) {
+        nextStep++;
+      }
 
       // Update customer's current_step in the database
       await handleUpdateCustomer({ current_step: nextStep });
@@ -417,6 +424,26 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const renderStepComponent = () => {
     if (!customer) return null;
+
+    // Check if this step is skipped for cash customers
+    if (isStepSkipped(selectedStep, customer.type)) {
+      return (
+        <div className="bg-stone-50 border border-stone-200 rounded-lg p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-stone-200 rounded-full mb-4">
+            <svg className="w-8 h-8 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-stone-900 mb-2">Step Not Applicable</h3>
+          <p className="text-stone-600">
+            This step is not required for cash customers and will be automatically skipped.
+          </p>
+          <p className="text-sm text-stone-500 mt-2">
+            Bank-related steps (Online Application, Submit to Bank, Bank Verification, Mail Bank, Bank Inspection) are only applicable to finance customers.
+          </p>
+        </div>
+      );
+    }
 
     const stepData = getStepData(selectedStep);
 
@@ -750,10 +777,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                 <p className="text-sm text-stone-600">KW Capacity</p>
                 <p className="font-medium text-stone-900">{customer.kw_capacity || 'N/A'} kW</p>
               </div>
-              <div>
-                <p className="text-sm text-stone-600">Quotation</p>
-                <p className="font-medium text-stone-900">₹{customer.quotation?.toLocaleString('en-IN') || 'N/A'}</p>
-              </div>
+              {!(customer.type === 'cash' && userRole === 'employee') && (
+                <div>
+                  <p className="text-sm text-stone-600">Quotation</p>
+                  <p className="font-medium text-stone-900">₹{customer.quotation?.toLocaleString('en-IN') || 'N/A'}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-stone-600">Created</p>
                 <p className="font-medium text-stone-900">{formatDate(customer.created_at)}</p>
@@ -805,6 +834,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                     const completed = step < customer.current_step;
                     const current = step === customer.current_step;
                     const active = selectedStep === step;
+                    const skipped = isStepSkipped(step, customer.type);
 
                     return (
                       <button
@@ -816,18 +846,28 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                             document.getElementById('step-content')?.scrollIntoView({ behavior: 'smooth' });
                           }
                         }}
-                        className={`w-full text-left px-4 py-3 border-b border-stone-100 last:border-0 flex items-center gap-3 transition-colors ${active
-                          ? 'bg-amber-50 border-l-4 border-l-amber-600'
-                          : 'hover:bg-stone-50 border-l-4 border-l-transparent'
+                        className={`w-full text-left px-4 py-3 border-b border-stone-100 last:border-0 flex items-center gap-3 transition-colors ${
+                          skipped
+                            ? 'bg-stone-100 opacity-60 cursor-default border-l-4 border-l-stone-300'
+                            : active
+                            ? 'bg-amber-50 border-l-4 border-l-amber-600'
+                            : 'hover:bg-stone-50 border-l-4 border-l-transparent'
                           }`}
                       >
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${completed
-                          ? 'bg-green-100 text-green-700'
-                          : current
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                          skipped
+                            ? 'bg-stone-200 text-stone-500'
+                            : completed
+                            ? 'bg-green-100 text-green-700'
+                            : current
                             ? 'bg-amber-100 text-amber-700'
                             : 'bg-stone-100 text-stone-500'
                           }`}>
-                          {completed ? (
+                          {skipped ? (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          ) : completed ? (
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
@@ -836,15 +876,16 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium truncate ${active ? 'text-amber-900' : 'text-stone-700'
+                          <p className={`text-sm font-medium truncate ${
+                            skipped ? 'text-stone-500' : active ? 'text-amber-900' : 'text-stone-700'
                             }`}>
                             {getStepName(step)}
                           </p>
                           <p className="text-xs text-stone-500 truncate">
-                            {completed ? 'Completed' : current ? 'In Progress' : 'Pending'}
+                            {skipped ? 'N/A - Cash Customer' : completed ? 'Completed' : current ? 'In Progress' : 'Pending'}
                           </p>
                         </div>
-                        {active && (
+                        {active && !skipped && (
                           <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
