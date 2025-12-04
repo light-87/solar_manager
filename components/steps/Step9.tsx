@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Customer, Step9Data, EquipmentItem } from '@/types';
 import FileUpload from '@/components/FileUpload';
+import BarcodeScanner from '@/components/BarcodeScanner';
 
 interface Step9Props {
   customer: Customer;
@@ -26,6 +27,10 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [scannerOpen, setScannerOpen] = useState<{
+    type: 'panel' | 'inverter' | null;
+    index: number | null;
+  }>({ type: null, index: null });
 
   // Update panel items array when count changes
   useEffect(() => {
@@ -132,6 +137,18 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
     }));
   };
 
+  const handleOpenScanner = (type: 'panel' | 'inverter', index: number) => {
+    setScannerOpen({ type, index });
+  };
+
+  const handleScanSuccess = (scannedValue: string) => {
+    if (scannerOpen.type === 'panel' && scannerOpen.index !== null) {
+      updatePanelItem(scannerOpen.index, 'serial_number', scannedValue);
+    } else if (scannerOpen.type === 'inverter' && scannerOpen.index !== null) {
+      updateInverterItem(scannerOpen.index, 'serial_number', scannedValue);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Completion File Status */}
@@ -198,12 +215,41 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">Serial Number</label>
-                <input
-                  type="text"
-                  value={item.serial_number}
-                  onChange={(e) => updatePanelItem(index, 'serial_number', e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item.serial_number}
+                    onChange={(e) => updatePanelItem(index, 'serial_number', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleOpenScanner('panel', index)}
+                    className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-1 text-sm whitespace-nowrap"
+                    title="Scan Barcode"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span>Scan</span>
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">DCR/NDCR</label>
@@ -287,12 +333,41 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">Serial Number</label>
-                <input
-                  type="text"
-                  value={item.serial_number}
-                  onChange={(e) => updateInverterItem(index, 'serial_number', e.target.value)}
-                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={item.serial_number}
+                    onChange={(e) => updateInverterItem(index, 'serial_number', e.target.value)}
+                    className="flex-1 px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleOpenScanner('inverter', index)}
+                    className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-1 text-sm whitespace-nowrap"
+                    title="Scan Barcode"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span>Scan</span>
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">DCR/NDCR</label>
@@ -379,6 +454,14 @@ export default function Step9({ customer, stepData, onSave }: Step9Props) {
           </button>
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      <BarcodeScanner
+        isOpen={scannerOpen.type !== null}
+        onClose={() => setScannerOpen({ type: null, index: null })}
+        onScanSuccess={handleScanSuccess}
+        title={`Scan ${scannerOpen.type === 'panel' ? 'Panel' : 'Inverter'} Serial Number`}
+      />
     </div>
   );
 }
