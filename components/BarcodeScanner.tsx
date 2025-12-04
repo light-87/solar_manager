@@ -18,6 +18,7 @@ export default function BarcodeScanner({
 }: BarcodeScannerProps) {
   const [scanMode, setScanMode] = useState<'choose' | 'camera' | 'upload'>('choose');
   const [isScanning, setIsScanning] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState('');
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('');
@@ -39,6 +40,18 @@ export default function BarcodeScanner({
     };
   }, []);
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setScanMode('choose');
+      setError('');
+      setIsScanning(false);
+      setIsInitializing(false);
+      setDevices([]);
+      setSelectedDevice('');
+    }
+  }, [isOpen]);
+
   // Get available video devices when camera mode is selected
   useEffect(() => {
     if (scanMode === 'camera' && !devices.length) {
@@ -58,6 +71,9 @@ export default function BarcodeScanner({
   }, [scanMode, selectedDevice]);
 
   const getVideoDevices = async () => {
+    setIsInitializing(true);
+    setError('');
+
     try {
       if (!codeReaderRef.current) return;
 
@@ -71,10 +87,16 @@ export default function BarcodeScanner({
           device.label.toLowerCase().includes('rear')
         );
         setSelectedDevice(backCamera?.deviceId || videoInputDevices[0].deviceId);
+      } else {
+        setError('No camera found on this device.');
+        setScanMode('choose');
       }
     } catch (err) {
       console.error('Error getting video devices:', err);
-      setError('Could not access camera. Please check permissions.');
+      setError('Could not access camera. Please check permissions and try again.');
+      setScanMode('choose');
+    } finally {
+      setIsInitializing(false);
     }
   };
 
@@ -114,10 +136,14 @@ export default function BarcodeScanner({
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !codeReaderRef.current) return;
+    if (!file || !codeReaderRef.current) {
+      setScanMode('choose');
+      return;
+    }
 
     setIsScanning(true);
     setError('');
+    setScanMode('upload');
 
     try {
       const result = await codeReaderRef.current.decodeFromImageUrl(
@@ -127,8 +153,17 @@ export default function BarcodeScanner({
     } catch (err) {
       console.error('Image scanning error:', err);
       setError('No barcode found in the image. Please try again with a clearer photo.');
-    } finally {
       setIsScanning(false);
+      // Return to choose mode after a delay so user can see the error
+      setTimeout(() => {
+        setScanMode('choose');
+        setError('');
+      }, 3000);
+    } finally {
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -150,7 +185,7 @@ export default function BarcodeScanner({
   };
 
   const handleUploadClick = () => {
-    setScanMode('upload');
+    setError('');
     fileInputRef.current?.click();
   };
 
@@ -258,53 +293,72 @@ export default function BarcodeScanner({
 
           {scanMode === 'camera' && (
             <div className="space-y-4">
-              {devices.length > 1 && (
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">
-                    Select Camera
-                  </label>
-                  <select
-                    value={selectedDevice}
-                    onChange={(e) => setSelectedDevice(e.target.value)}
-                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
-                  >
-                    {devices.map((device) => (
-                      <option key={device.deviceId} value={device.deviceId}>
-                        {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
-                      </option>
-                    ))}
-                  </select>
+              {isInitializing ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mb-4"></div>
+                  <p className="text-sm text-stone-600">Initializing camera...</p>
                 </div>
-              )}
-
-              <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  playsInline
-                />
-
-                {isScanning && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="border-4 border-amber-500 rounded-lg" style={{ width: '80%', height: '30%' }}>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-full h-0.5 bg-amber-500 animate-pulse"></div>
-                      </div>
+              ) : (
+                <>
+                  {devices.length > 1 && (
+                    <div>
+                      <label className="block text-sm font-medium text-stone-700 mb-2">
+                        Select Camera
+                      </label>
+                      <select
+                        value={selectedDevice}
+                        onChange={(e) => setSelectedDevice(e.target.value)}
+                        className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-600 focus:border-transparent outline-none"
+                      >
+                        {devices.map((device) => (
+                          <option key={device.deviceId} value={device.deviceId}>
+                            {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
+                          </option>
+                        ))}
+                      </select>
                     </div>
+                  )}
+
+                  <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full object-cover"
+                      playsInline
+                      autoPlay
+                    />
+
+                    {isScanning && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="border-4 border-amber-500 rounded-lg" style={{ width: '80%', height: '30%' }}>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-full h-0.5 bg-amber-500 animate-pulse"></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!isScanning && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="text-white text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                          <p className="text-sm">Starting camera...</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <p className="text-sm text-center text-stone-600">
-                Position the barcode within the frame
-              </p>
+                  <p className="text-sm text-center text-stone-600">
+                    Position the barcode within the frame
+                  </p>
 
-              <button
-                onClick={() => setScanMode('choose')}
-                className="w-full px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50 transition-colors"
-              >
-                Back
-              </button>
+                  <button
+                    onClick={() => setScanMode('choose')}
+                    className="w-full px-4 py-2 border border-stone-300 rounded-lg hover:bg-stone-50 transition-colors"
+                  >
+                    Back
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -314,28 +368,37 @@ export default function BarcodeScanner({
               <p className="text-sm text-stone-600">Scanning image...</p>
             </div>
           )}
+        </div>
 
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <svg
-                  className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+        {/* Error message - shown outside content div to always be visible */}
+        {error && (
+          <div className="mx-6 mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div className="flex-1">
                 <p className="text-sm text-red-800">{error}</p>
+                <button
+                  onClick={() => setError('')}
+                  className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
+                >
+                  Dismiss
+                </button>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
