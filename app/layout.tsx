@@ -1,12 +1,30 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#d97706',
+};
 
 export const metadata: Metadata = {
   title: "Solar Sales Manager",
   description: "Professional solar sales customer management system",
+  manifest: '/manifest.json',
   icons: {
     icon: '/favicon.ico',
+    apple: '/icon.svg',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Solar Sales',
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 

@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#d97706" rx="64"/>
+
+  <!-- Sun icon centered and scaled -->
+  <g transform="translate(256, 256)">
+    <!-- Sun rays and circle -->
+    <path
+      stroke="#ffffff"
+      stroke-width="16"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+      d="M 0,-128 L 0,-96 M 0,96 L 0,128 M 128,0 L 96,0 M -96,0 L -128,0 M 90.5,90.5 L 67.88,67.88 M -67.88,-67.88 L -90.5,-90.5 M 90.5,-90.5 L 67.88,-67.88 M -67.88,67.88 L -90.5,90.5 M 48,0 A 48,48 0 1,1 -48,0 A 48,48 0 1,1 48,0"
+    />
+  </g>
+</svg>
