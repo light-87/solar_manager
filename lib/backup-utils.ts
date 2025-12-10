@@ -4,7 +4,7 @@
  */
 
 import JSZip from 'jszip';
-import { downloadBlobFile, extractDocumentUrls } from './blob-utils';
+import { downloadBlobFile, extractDocumentUrls } from './r2-storage';
 import type { Customer } from '@/types';
 
 interface StepData {

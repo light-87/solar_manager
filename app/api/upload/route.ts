@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { uploadFile } from '@/lib/r2-storage';
 
 export async function POST(request: Request) {
   try {
@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File;
     const customerId = formData.get('customerId') as string;
     const documentType = formData.get('documentType') as string;
+    const workspaceId = formData.get('workspaceId') as string || 'default';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -19,17 +20,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create a unique filename with customer info
-    const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${customerId}_${documentType}_${timestamp}_${sanitizedFileName}`;
+    // Convert file to buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Upload to Vercel Blob
-    const blob = await put(filename, file, {
-      access: 'public',
-    });
+    // Upload to R2 with workspace isolation
+    // Path structure: {workspaceId}/{customerId}/{documentType}/{timestamp}_{filename}
+    const { url, key } = await uploadFile(
+      buffer,
+      workspaceId,
+      customerId,
+      documentType,
+      file.name,
+      file.type
+    );
 
-    return NextResponse.json({ url: blob.url }, { status: 200 });
+    return NextResponse.json({
+      url,
+      key,
+      message: 'File uploaded successfully to R2'
+    }, { status: 200 });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(

@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { extractDocumentUrls, calculateDocumentStorage } from '@/lib/blob-utils';
+import { extractDocumentUrls, calculateDocumentStorage } from '@/lib/r2-storage';
 
 export async function GET(request: Request) {
   try {
