@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getBlobStorageStats } from '@/lib/blob-utils';
+import { getBlobStorageStats } from '@/lib/r2-storage';
 
 export async function GET(request: Request) {
   try {

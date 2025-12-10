@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { extractDocumentUrls, deleteBlobFiles } from '@/lib/blob-utils';
+import { extractDocumentUrls, deleteBlobFiles } from '@/lib/r2-storage';
 
 export async function DELETE(
   request: Request,
