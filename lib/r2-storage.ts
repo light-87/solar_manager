@@ -134,7 +134,8 @@ export async function downloadFile(key: string): Promise<{
 
     const response = await r2Client.send(command);
     const bytes = await response.Body!.transformToByteArray();
-    const buffer = bytes.buffer;
+    // Convert Uint8Array to ArrayBuffer (not SharedArrayBuffer)
+    const buffer = bytes.buffer.slice(0) as ArrayBuffer;
 
     const filename = key.split('/').pop()?.split('_').slice(1).join('_') || 'download';
     const contentType = response.ContentType || 'application/octet-stream';
