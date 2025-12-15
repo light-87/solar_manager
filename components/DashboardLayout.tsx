@@ -47,7 +47,7 @@ const tabs: Tab[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { userRole, logout } = useAuth();
+  const { userRole, workspaceName, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -83,9 +83,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </svg>
               </div>
               <div className="ml-3">
-                <h1 className="text-lg font-semibold text-stone-900">
-                  Solar Sales Manager
+                <h1 className="text-xl font-bold text-stone-900 leading-tight">
+                  {workspaceName}
                 </h1>
+                <p className="text-xs text-stone-600">
+                  Solar Management System
+                </p>
               </div>
             </div>
 
