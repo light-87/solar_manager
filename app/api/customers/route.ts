@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 // GET all customers with optional filters
 export async function GET(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const type = searchParams.get('type');
@@ -13,6 +17,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('customers')
       .select('*')
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .order('updated_at', { ascending: false });
 
     if (status) {
@@ -50,6 +55,9 @@ export async function GET(request: Request) {
 // POST create new customer
 export async function POST(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const body = await request.json();
     const { name, email, phone, address, type, kw_capacity, quotation } = body;
 
@@ -73,6 +81,7 @@ export async function POST(request: Request) {
           quotation: quotation ? parseFloat(quotation) : null,
           status: 'active',
           current_step: 1,
+          workspace_id: workspaceId,  // 🔐 ASSIGN TO WORKSPACE!
         },
       ])
       .select()
@@ -89,6 +98,7 @@ export async function POST(request: Request) {
         {
           customer_id: data.id,
           step_number: 1,
+          workspace_id: workspaceId,  // 🔐 ASSIGN TO WORKSPACE!
           data: {
             created_on: new Date().toISOString(),
           },

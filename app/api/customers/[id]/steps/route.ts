@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 // GET all steps for a customer
 export async function GET(
@@ -7,11 +8,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { id } = await params;
     const { data, error } = await supabase
       .from('step_data')
       .select('*')
       .eq('customer_id', id)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .order('step_number', { ascending: true });
 
     if (error) {
@@ -34,6 +39,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { id } = await params;
     const body = await request.json();
     const { step_number, data } = body;
@@ -51,6 +59,7 @@ export async function POST(
       .select('*')
       .eq('customer_id', id)
       .eq('step_number', step_number)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .single();
 
     let result;
@@ -65,6 +74,7 @@ export async function POST(
         })
         .eq('customer_id', id)
         .eq('step_number', step_number)
+        .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
         .select()
         .single();
 
@@ -82,6 +92,7 @@ export async function POST(
             customer_id: id,
             step_number,
             data,
+            workspace_id: workspaceId,  // 🔐 ASSIGN TO WORKSPACE!
             completed_at: new Date().toISOString()
           },
         ])

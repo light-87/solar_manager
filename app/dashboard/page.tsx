@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Customer, DashboardStats, CustomerType } from '@/types';
 import { formatDate, getStepName } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 
 export default function FinanceDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -32,8 +33,8 @@ export default function FinanceDashboard() {
 
   const fetchData = async () => {
     try {
-      // Fetch all customers (both finance and cash)
-      const customersRes = await fetch('/api/customers');
+      // Fetch all customers (both finance and cash) with workspace context
+      const customersRes = await apiFetch('/api/customers');
       const customersData = await customersRes.json();
       const allCustomers = customersData.customers || [];
       setCustomers(allCustomers);
@@ -411,7 +412,7 @@ function NewCustomerModal({
     setError('');
 
     try {
-      const response = await fetch('/api/customers', {
+      const response = await apiFetch('/api/customers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
