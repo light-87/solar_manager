@@ -8,6 +8,7 @@ import BackupStorageStats from '@/components/admin/BackupStorageStats';
 import BackupCustomerCard from '@/components/admin/BackupCustomerCard';
 import BackupActivityLog from '@/components/admin/BackupActivityLog';
 import type { Customer } from '@/types';
+import { apiFetch } from '@/lib/api-client';
 
 interface BackupCustomer extends Customer {
   document_count: number;
@@ -35,7 +36,7 @@ export default function BackupPage() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/backup/customers');
+      const response = await apiFetch('/api/admin/backup/customers');
       if (response.ok) {
         const data: BackupCustomersResponse = await response.json();
         setCustomers(data.customers || []);

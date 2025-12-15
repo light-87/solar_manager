@@ -5,10 +5,15 @@
 
 import { NextResponse } from 'next/server';
 import { getBlobStorageStats } from '@/lib/r2-storage';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function GET(request: Request) {
   try {
-    const stats = await getBlobStorageStats();
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
+    // Get storage stats filtered by workspace
+    const stats = await getBlobStorageStats(workspaceId);
 
     return NextResponse.json(stats);
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Customer } from '@/types';
+import { apiFetch } from '@/lib/api-client';
 
 interface BackupCustomer extends Customer {
   document_count: number;
@@ -38,7 +39,7 @@ export default function BackupCustomerCard({
 
       const { userId, username } = JSON.parse(authData);
 
-      const response = await fetch('/api/admin/backup/download', {
+      const response = await apiFetch('/api/admin/backup/download', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +92,7 @@ export default function BackupCustomerCard({
 
       const { userId, username } = JSON.parse(authData);
 
-      const response = await fetch(`/api/admin/backup/cleanup/${customer.id}`, {
+      const response = await apiFetch(`/api/admin/backup/cleanup/${customer.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

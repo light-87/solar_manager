@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 interface StorageStats {
   total_storage_bytes: number;
@@ -16,7 +17,7 @@ export default function BackupStorageStats() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/backup/storage');
+      const response = await apiFetch('/api/admin/backup/storage');
       if (response.ok) {
         const data = await response.json();
         setStats(data);
