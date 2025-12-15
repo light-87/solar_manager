@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 
 export default function SettingsPage() {
   const { userId, username, workspaceCode, workspaceName } = useAuth();
@@ -38,7 +39,7 @@ export default function SettingsPage() {
     // Load employee info
     const loadEmployeeInfo = async () => {
       try {
-        const response = await fetch(`/api/auth/manage-user?userId=${userId}`);
+        const response = await apiFetch(`/api/auth/manage-user?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.employee) {
@@ -73,7 +74,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +137,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -185,7 +186,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -240,7 +241,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
