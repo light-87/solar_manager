@@ -8,7 +8,15 @@ interface AuthContextType {
   userRole: UserRole | null;
   userId: string | null;
   username: string | null;
-  login: (role: UserRole, userId: string, username: string) => void;
+  workspaceCode: string | null;
+  workspaceName: string | null;
+  login: (
+    role: UserRole,
+    userId: string,
+    username: string,
+    workspaceCode?: string,
+    workspaceName?: string
+  ) => void;
   logout: () => void;
 }
 
@@ -19,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [workspaceCode, setWorkspaceCode] = useState<string | null>(null);
+  const [workspaceName, setWorkspaceName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -26,11 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedAuth = localStorage.getItem('auth');
     if (storedAuth) {
       try {
-        const { role, userId, username } = JSON.parse(storedAuth);
+        const { role, userId, username, workspaceCode, workspaceName } = JSON.parse(storedAuth);
         setIsAuthenticated(true);
         setUserRole(role);
         setUserId(userId);
         setUsername(username);
+        setWorkspaceCode(workspaceCode || null);
+        setWorkspaceName(workspaceName || null);
       } catch (e) {
         localStorage.removeItem('auth');
       }
@@ -38,12 +50,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (role: UserRole, userId: string, username: string) => {
+  const login = (
+    role: UserRole,
+    userId: string,
+    username: string,
+    workspaceCode?: string,
+    workspaceName?: string
+  ) => {
     setIsAuthenticated(true);
     setUserRole(role);
     setUserId(userId);
     setUsername(username);
-    localStorage.setItem('auth', JSON.stringify({ role, userId, username }));
+    setWorkspaceCode(workspaceCode || null);
+    setWorkspaceName(workspaceName || null);
+    localStorage.setItem(
+      'auth',
+      JSON.stringify({ role, userId, username, workspaceCode, workspaceName })
+    );
   };
 
   const logout = () => {
@@ -51,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserRole(null);
     setUserId(null);
     setUsername(null);
+    setWorkspaceCode(null);
+    setWorkspaceName(null);
     localStorage.removeItem('auth');
   };
 
@@ -66,7 +91,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, userId, username, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        userRole,
+        userId,
+        username,
+        workspaceCode,
+        workspaceName,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/lib/auth-context';
-import { getWorkspaceCode, getVendorName } from '@/lib/env';
 
 export default function SettingsPage() {
-  const { userId, username } = useAuth();
+  const { userId, username, workspaceCode, workspaceName } = useAuth();
   const [activeTab, setActiveTab] = useState<'own' | 'employee'>('own');
 
   // Own credentials state
@@ -29,9 +28,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-
-  const workspaceCode = getWorkspaceCode();
-  const vendorName = getVendorName();
 
   // Load current username and employee info
   useEffect(() => {
@@ -291,11 +287,13 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-amber-800">Workspace Code:</span>
-                <span className="text-sm text-amber-900 font-mono bg-white px-3 py-1 rounded">{workspaceCode}</span>
+                <span className="text-sm text-amber-900 font-mono bg-white px-3 py-1 rounded">
+                  {workspaceCode || 'N/A'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-amber-800">Vendor Name:</span>
-                <span className="text-sm text-amber-900">{vendorName}</span>
+                <span className="text-sm font-medium text-amber-800">Workspace Name:</span>
+                <span className="text-sm text-amber-900">{workspaceName || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-amber-800">Your Username:</span>
