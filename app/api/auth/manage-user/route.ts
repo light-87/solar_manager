@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { validatePin } from '@/lib/env';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 /**
  * Manage User API - Handle username and PIN changes
@@ -13,6 +14,9 @@ import { validatePin } from '@/lib/env';
  */
 export async function POST(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { action, userId, currentPin, newUsername, newPin, targetUserId } = await request.json();
 
     // Validate required fields
@@ -23,11 +27,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get current user to verify they exist and check their role
+    // Get current user to verify they exist and check their role (scoped to workspace)
     const { data: users, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .limit(1);
 
     if (userError) {
@@ -54,10 +59,10 @@ export async function POST(request: Request) {
     // Handle different actions
     switch (action) {
       case 'change-own-username':
-        return await changeUsername(userId, newUsername);
+        return await changeUsername(userId, newUsername, workspaceId);
 
       case 'change-own-pin':
-        return await changePIN(userId, newPin);
+        return await changePIN(userId, newPin, workspaceId);
 
       case 'change-employee-username':
         if (currentUser.role !== 'admin') {
@@ -66,7 +71,7 @@ export async function POST(request: Request) {
             { status: 403 }
           );
         }
-        return await changeUsername(targetUserId, newUsername);
+        return await changeUsername(targetUserId, newUsername, workspaceId);
 
       case 'change-employee-pin':
         if (currentUser.role !== 'admin') {
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
             { status: 403 }
           );
         }
-        return await changePIN(targetUserId, newPin);
+        return await changePIN(targetUserId, newPin, workspaceId);
 
       default:
         return NextResponse.json(
@@ -95,7 +100,7 @@ export async function POST(request: Request) {
 /**
  * Change username for a user
  */
-async function changeUsername(userId: string, newUsername: string) {
+async function changeUsername(userId: string, newUsername: string, workspaceId: string) {
   if (!newUsername || !newUsername.trim()) {
     return NextResponse.json(
       { error: 'New username is required' },
@@ -103,11 +108,12 @@ async function changeUsername(userId: string, newUsername: string) {
     );
   }
 
-  // Check if username already exists
+  // Check if username already exists IN THIS WORKSPACE
   const { data: existingUsers, error: checkError } = await supabase
     .from('users')
     .select('id')
     .eq('username', newUsername)
+    .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
     .neq('id', userId);
 
   if (checkError) {
@@ -121,11 +127,12 @@ async function changeUsername(userId: string, newUsername: string) {
     );
   }
 
-  // Update username
+  // Update username (with workspace check for safety)
   const { error: updateError } = await supabase
     .from('users')
     .update({ username: newUsername })
-    .eq('id', userId);
+    .eq('id', userId)
+    .eq('workspace_id', workspaceId);  // 🔐 WORKSPACE ISOLATION!
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -140,7 +147,7 @@ async function changeUsername(userId: string, newUsername: string) {
 /**
  * Change PIN for a user
  */
-async function changePIN(userId: string, newPin: string) {
+async function changePIN(userId: string, newPin: string, workspaceId: string) {
   if (!newPin) {
     return NextResponse.json(
       { error: 'New PIN is required' },
@@ -156,11 +163,12 @@ async function changePIN(userId: string, newPin: string) {
     );
   }
 
-  // Update PIN
+  // Update PIN (with workspace check for safety)
   const { error: updateError } = await supabase
     .from('users')
     .update({ pin: newPin })
-    .eq('id', userId);
+    .eq('id', userId)
+    .eq('workspace_id', workspaceId);  // 🔐 WORKSPACE ISOLATION!
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
@@ -177,6 +185,9 @@ async function changePIN(userId: string, newPin: string) {
  */
 export async function GET(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -187,11 +198,12 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get user to verify they're admin
+    // Get user to verify they're admin (scoped to workspace)
     const { data: users, error: userError } = await supabase
       .from('users')
       .select('*')
       .eq('id', userId)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .limit(1);
 
     if (userError) {
@@ -205,11 +217,12 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get employee info
+    // Get employee info from THIS WORKSPACE ONLY
     const { data: employees, error: employeeError } = await supabase
       .from('users')
       .select('id, username, role')
       .eq('role', 'employee')
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .limit(1);
 
     if (employeeError) {
