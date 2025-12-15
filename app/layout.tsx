@@ -11,7 +11,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Solar Sales Manager",
+  title: "Solar Management System",
   description: "Professional solar sales customer management system",
   manifest: '/manifest.json',
   icons: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Solar Sales',
+    title: 'Solar Manager',
   },
   formatDetection: {
     telephone: false,

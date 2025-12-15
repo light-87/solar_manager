@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 // GET single customer
 export async function GET(
@@ -7,11 +8,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { id } = await params;
     const { data, error } = await supabase
       .from('customers')
       .select('*')
       .eq('id', id)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .single();
 
     if (error) {
@@ -41,6 +46,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { id } = await params;
     const body = await request.json();
     const { name, email, phone, address, status, current_step, notes, kw_capacity, quotation, site_location } = body;
@@ -61,6 +69,7 @@ export async function PUT(
       .from('customers')
       .update(updates)
       .eq('id', id)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .select()
       .single();
 
@@ -84,11 +93,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { id } = await params;
     const { error } = await supabase
       .from('customers')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('workspace_id', workspaceId);  // 🔐 WORKSPACE ISOLATION!
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

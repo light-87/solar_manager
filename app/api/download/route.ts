@@ -7,9 +7,13 @@
 
 import { NextResponse } from 'next/server';
 import { downloadFile } from '@/lib/r2-storage';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function GET(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { searchParams } = new URL(request.url);
     const key = searchParams.get('key');
 
@@ -17,6 +21,24 @@ export async function GET(request: Request) {
       return NextResponse.json(
         { error: 'Missing key parameter' },
         { status: 400 }
+      );
+    }
+
+    // Validate the key belongs to this workspace
+    // Key format: {workspaceId}/{customerId}/{category}/{timestamp}_{filename}
+    const keyParts = key.split('/');
+    if (keyParts.length < 2) {
+      return NextResponse.json(
+        { error: 'Invalid key format' },
+        { status: 400 }
+      );
+    }
+
+    const keyWorkspaceId = keyParts[0];
+    if (keyWorkspaceId !== workspaceId) {
+      return NextResponse.json(
+        { error: 'Access denied: File does not belong to your workspace' },
+        { status: 403 }
       );
     }
 

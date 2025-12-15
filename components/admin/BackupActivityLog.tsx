@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 interface BackupLog {
   id: string;
@@ -19,7 +20,7 @@ export default function BackupActivityLog() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/backup/logs');
+      const response = await apiFetch('/api/admin/backup/logs');
       if (response.ok) {
         const data = await response.json();
         setLogs(data.logs || []);

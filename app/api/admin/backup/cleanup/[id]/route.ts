@@ -6,12 +6,16 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { extractDocumentUrls, deleteBlobFiles } from '@/lib/r2-storage';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { id: customerId } = await params;
     const body = await request.json();
     const { userId, username } = body;
@@ -23,11 +27,12 @@ export async function DELETE(
       );
     }
 
-    // 1. Fetch customer and verify it's archived
+    // 1. Fetch customer and verify it's archived (scoped to workspace)
     const { data: customer, error: customerError } = await supabase
       .from('customers')
       .select('*')
       .eq('id', customerId)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .single();
 
     if (customerError || !customer) {
@@ -45,11 +50,12 @@ export async function DELETE(
       );
     }
 
-    // 2. Fetch all step data
+    // 2. Fetch all step data (scoped to workspace)
     const { data: steps, error: stepsError } = await supabase
       .from('step_data')
       .select('*')
-      .eq('customer_id', customerId);
+      .eq('customer_id', customerId)
+      .eq('workspace_id', workspaceId);  // 🔐 WORKSPACE ISOLATION!
 
     if (stepsError) {
       console.error('Error fetching steps:', stepsError);
@@ -86,6 +92,7 @@ export async function DELETE(
         action_type: 'cleanup',
         storage_freed_bytes: deleteResult.total_size_freed,
         documents_deleted: deleteResult.deleted_count,
+        workspace_id: workspaceId,  // 🔐 ASSIGN TO WORKSPACE!
       });
 
     if (logError) {

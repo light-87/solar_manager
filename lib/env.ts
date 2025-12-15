@@ -1,27 +1,23 @@
 /**
  * Environment Variable Validation and Helpers
  *
- * This module provides utilities for validating and accessing environment variables
- * required for multi-deployment configuration.
+ * This module provides utilities for validating and accessing environment variables.
+ *
+ * MULTI-TENANCY UPDATE:
+ * - Workspace codes are now validated against the database (workspaces table)
+ * - No longer requires NEXT_PUBLIC_WORKSPACE_CODE environment variable
+ * - Each client/workspace is managed dynamically via the database
+ * - Vendor names come from workspace.name in database, not environment
  */
 
-// Client-side environment variables (accessible in browser)
-export function getWorkspaceCode(): string {
-  const workspaceCode = process.env.NEXT_PUBLIC_WORKSPACE_CODE;
-
-  if (!workspaceCode) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_WORKSPACE_CODE environment variable. ' +
-      'This is required for workspace-based authentication. ' +
-      'Please set this in your .env.local file or deployment environment.'
-    );
-  }
-
-  return workspaceCode;
-}
-
+/**
+ * Get vendor name for display
+ *
+ * NOTE: In multi-tenant mode, this is just a default fallback.
+ * The actual workspace name comes from the database after login.
+ */
 export function getVendorName(): string {
-  return process.env.NEXT_PUBLIC_VENDOR_NAME || 'Solar Sales Management';
+  return 'Solar Sales Management';
 }
 
 // Server-side only environment variables (NOT accessible in browser)
@@ -52,13 +48,24 @@ export function validatePin(pin: string): boolean {
   return /^\d{5}$/.test(pin);
 }
 
-export function validateWorkspaceCode(code: string): boolean {
-  try {
-    const expectedCode = getWorkspaceCode();
-    return code === expectedCode;
-  } catch {
+/**
+ * Validates workspace code format
+ *
+ * This is a basic format validation only. The actual workspace existence
+ * and active status is validated against the database during login.
+ *
+ * Format rules:
+ * - Must be alphanumeric with hyphens allowed
+ * - No spaces or special characters
+ * - Minimum 2 characters
+ */
+export function validateWorkspaceCodeFormat(code: string): boolean {
+  if (!code || code.length < 2) {
     return false;
   }
+
+  // Allow alphanumeric characters and hyphens, no spaces
+  return /^[A-Z0-9-]+$/i.test(code);
 }
 
 // Check if running on server-side
@@ -72,13 +79,6 @@ export function validateEnvironment(serverSide: boolean = false): {
   errors: string[];
 } {
   const errors: string[] = [];
-
-  // Client-side variables
-  try {
-    getWorkspaceCode();
-  } catch (error) {
-    errors.push((error as Error).message);
-  }
 
   // Server-side variables (only check on server)
   if (serverSide) {

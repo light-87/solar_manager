@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Customer, StepData } from '@/types';
 import { formatDate, isStepSkipped } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
+import { apiFetch } from '@/lib/api-client';
 import Step1 from '@/components/steps/Step1';
 import Step2 from '@/components/steps/Step2';
 import Step3 from '@/components/steps/Step3';
@@ -43,8 +44,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const fetchCustomerData = async () => {
     try {
       const [customerRes, stepsRes] = await Promise.all([
-        fetch(`/api/customers/${id}`),
-        fetch(`/api/customers/${id}/steps`),
+        apiFetch(`/api/customers/${id}`),
+        apiFetch(`/api/customers/${id}/steps`),
       ]);
 
       const customerData = await customerRes.json();
@@ -63,7 +64,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const handleSaveStep = async (stepNumber: number, data: any) => {
     try {
-      const response = await fetch(`/api/customers/${id}/steps`, {
+      const response = await apiFetch(`/api/customers/${id}/steps`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       }
 
       // Just update the steps data without resetting the selected step
-      const stepsRes = await fetch(`/api/customers/${id}/steps`);
+      const stepsRes = await apiFetch(`/api/customers/${id}/steps`);
       const stepsData = await stepsRes.json();
       setSteps(stepsData.steps || []);
     } catch (error) {
@@ -122,7 +123,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
   const handleUpdateCustomer = async (updates: Partial<Customer>) => {
     try {
-      const response = await fetch(`/api/customers/${id}`, {
+      const response = await apiFetch(`/api/customers/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

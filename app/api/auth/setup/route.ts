@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { validatePin, validateWorkspaceCode } from '@/lib/env';
+import { validatePin, validateWorkspaceCodeFormat } from '@/lib/env';
 
 /**
- * First-time setup API route
+ * First-time setup API route - Multi-Tenant Version
  *
- * Creates initial admin and employee accounts
- * Only works if no users exist in the database
+ * Creates initial admin and employee accounts for a workspace
+ * Only works if no users exist for the given workspace
+ *
+ * MULTI-TENANCY:
+ * - Validates workspace code against database (workspaces table)
+ * - Creates users scoped to the specific workspace
  */
 export async function POST(request: Request) {
   try {
@@ -26,11 +30,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate workspace code
-    if (!validateWorkspaceCode(workspaceCode)) {
+    // Validate workspace code format
+    if (!validateWorkspaceCodeFormat(workspaceCode)) {
       return NextResponse.json(
-        { error: 'Invalid workspace code' },
+        { error: 'Invalid workspace code format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate workspace exists in database and is active
+    const { data: workspaces, error: workspaceError } = await supabase
+      .from('workspaces')
+      .select('id, code, name, is_active')
+      .eq('code', workspaceCode)
+      .limit(1);
+
+    if (workspaceError) {
+      return NextResponse.json({ error: workspaceError.message }, { status: 500 });
+    }
+
+    if (!workspaces || workspaces.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid workspace code. Workspace not found.' },
         { status: 401 }
+      );
+    }
+
+    const workspace = workspaces[0];
+
+    if (!workspace.is_active) {
+      return NextResponse.json(
+        { error: 'This workspace is currently inactive.' },
+        { status: 403 }
       );
     }
 
@@ -65,10 +96,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if users already exist
+    // Check if users already exist for THIS workspace
     const { data: existingUsers, error: checkError } = await supabase
       .from('users')
       .select('id')
+      .eq('workspace_id', workspaceCode)
       .limit(1);
 
     if (checkError) {
@@ -77,15 +109,16 @@ export async function POST(request: Request) {
 
     if (existingUsers && existingUsers.length > 0) {
       return NextResponse.json(
-        { error: 'Setup already completed. Users already exist.' },
+        { error: 'Setup already completed for this workspace. Users already exist.' },
         { status: 400 }
       );
     }
 
-    // Check if usernames are already taken (shouldn't happen but check anyway)
+    // Check if usernames are already taken in THIS workspace
     const { data: usernameCheck, error: usernameError } = await supabase
       .from('users')
       .select('username')
+      .eq('workspace_id', workspaceCode)
       .or(`username.eq.${adminUsername},username.eq.${employeeUsername}`);
 
     if (usernameError) {
@@ -94,12 +127,12 @@ export async function POST(request: Request) {
 
     if (usernameCheck && usernameCheck.length > 0) {
       return NextResponse.json(
-        { error: 'One or more usernames already taken' },
+        { error: 'One or more usernames already taken in this workspace' },
         { status: 400 }
       );
     }
 
-    // Create admin and employee users
+    // Create admin and employee users for this workspace
     const { error: insertError } = await supabase
       .from('users')
       .insert([
@@ -107,11 +140,13 @@ export async function POST(request: Request) {
           role: 'admin',
           username: adminUsername,
           pin: adminPin,
+          workspace_id: workspaceCode,  // 🔐 Scope to workspace
         },
         {
           role: 'employee',
           username: employeeUsername,
           pin: employeePin,
+          workspace_id: workspaceCode,  // 🔐 Scope to workspace
         },
       ]);
 

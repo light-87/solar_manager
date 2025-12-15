@@ -6,9 +6,13 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { createCustomerBackupZip, generateBackupFilename } from '@/lib/backup-utils';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function POST(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const body = await request.json();
     const { customerId, userId, username } = body;
 
@@ -19,11 +23,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Fetch customer data
+    // 1. Fetch customer data (scoped to workspace)
     const { data: customer, error: customerError } = await supabase
       .from('customers')
       .select('*')
       .eq('id', customerId)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .single();
 
     if (customerError || !customer) {
@@ -42,11 +47,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Fetch all step data
+    // 2. Fetch all step data (scoped to workspace)
     const { data: steps, error: stepsError } = await supabase
       .from('step_data')
       .select('*')
       .eq('customer_id', customerId)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .order('step_number', { ascending: true });
 
     if (stepsError) {
@@ -61,7 +67,8 @@ export async function POST(request: Request) {
     const { error: updateError } = await supabase
       .from('customers')
       .update({ status: 'archived', updated_at: new Date().toISOString() })
-      .eq('id', customerId);
+      .eq('id', customerId)
+      .eq('workspace_id', workspaceId);  // 🔐 WORKSPACE ISOLATION!
 
     if (updateError) {
       console.error('Error updating customer status:', updateError);
@@ -85,6 +92,7 @@ export async function POST(request: Request) {
         action_type: 'download',
         storage_freed_bytes: 0,
         documents_deleted: 0,
+        workspace_id: workspaceId,  // 🔐 ASSIGN TO WORKSPACE!
       });
 
     if (logError) {

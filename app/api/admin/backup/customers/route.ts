@@ -6,14 +6,19 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { extractDocumentUrls, calculateDocumentStorage } from '@/lib/r2-storage';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function GET(request: Request) {
   try {
-    // Fetch all completed (non-archived) customers
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
+    // Fetch all completed (non-archived) customers from THIS workspace
     const { data: customers, error: customersError } = await supabase
       .from('customers')
       .select('*')
       .eq('status', 'completed')
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .order('updated_at', { ascending: false });
 
     if (customersError) {
@@ -36,11 +41,12 @@ export async function GET(request: Request) {
     // For each customer, get their step data and calculate storage
     const customersWithStorage = await Promise.all(
       customers.map(async (customer) => {
-        // Fetch step data for this customer
+        // Fetch step data for this customer (within the same workspace)
         const { data: steps, error: stepsError } = await supabase
           .from('step_data')
           .select('*')
           .eq('customer_id', customer.id)
+          .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
           .order('step_number', { ascending: true });
 
         if (stepsError || !steps) {

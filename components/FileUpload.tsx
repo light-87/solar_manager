@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { apiFetch } from '@/lib/api-client';
 
 interface FileUploadProps {
   label: string;
@@ -44,7 +45,7 @@ export default function FileUpload({
         formData.append('customerId', customerId);
         formData.append('documentType', documentType);
 
-        const response = await fetch('/api/upload', {
+        const response = await apiFetch('/api/upload', {
           method: 'POST',
           body: formData,
         });

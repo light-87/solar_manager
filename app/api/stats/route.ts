@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function GET(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'finance' or 'cash'
 
-    let query = supabase.from('customers').select('status, current_step');
+    let query = supabase
+      .from('customers')
+      .select('status, current_step')
+      .eq('workspace_id', workspaceId);  // 🔐 WORKSPACE ISOLATION!
 
     if (type) {
       query = query.eq('type', type);
     }
 
-    const { data, error } = await query;
+    const { data, error} = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

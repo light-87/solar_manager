@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
 import { uploadFile } from '@/lib/r2-storage';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header (not from client formData!)
+    const workspaceId = requireWorkspaceId(request);
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const customerId = formData.get('customerId') as string;
     const documentType = formData.get('documentType') as string;
-    const workspaceId = formData.get('workspaceId') as string || 'default';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -17,6 +21,21 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Customer ID and document type are required' },
         { status: 400 }
+      );
+    }
+
+    // Verify customer belongs to this workspace (prevent cross-workspace uploads)
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', customerId)
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
+      .single();
+
+    if (customerError || !customer) {
+      return NextResponse.json(
+        { error: 'Customer not found or access denied' },
+        { status: 404 }
       );
     }
 

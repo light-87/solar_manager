@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/lib/auth-context';
-import { getWorkspaceCode, getVendorName } from '@/lib/env';
+import { apiFetch } from '@/lib/api-client';
 
 export default function SettingsPage() {
-  const { userId, username } = useAuth();
+  const { userId, username, workspaceCode, workspaceName } = useAuth();
   const [activeTab, setActiveTab] = useState<'own' | 'employee'>('own');
 
   // Own credentials state
@@ -30,9 +30,6 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
-  const workspaceCode = getWorkspaceCode();
-  const vendorName = getVendorName();
-
   // Load current username and employee info
   useEffect(() => {
     if (username) {
@@ -42,7 +39,7 @@ export default function SettingsPage() {
     // Load employee info
     const loadEmployeeInfo = async () => {
       try {
-        const response = await fetch(`/api/auth/manage-user?userId=${userId}`);
+        const response = await apiFetch(`/api/auth/manage-user?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.employee) {
@@ -77,7 +74,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,7 +137,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -189,7 +186,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -244,7 +241,7 @@ export default function SettingsPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/manage-user', {
+      const response = await apiFetch('/api/auth/manage-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -291,11 +288,13 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-amber-800">Workspace Code:</span>
-                <span className="text-sm text-amber-900 font-mono bg-white px-3 py-1 rounded">{workspaceCode}</span>
+                <span className="text-sm text-amber-900 font-mono bg-white px-3 py-1 rounded">
+                  {workspaceCode || 'N/A'}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-amber-800">Vendor Name:</span>
-                <span className="text-sm text-amber-900">{vendorName}</span>
+                <span className="text-sm font-medium text-amber-800">Workspace Name:</span>
+                <span className="text-sm text-amber-900">{workspaceName || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-amber-800">Your Username:</span>

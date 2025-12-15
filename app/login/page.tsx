@@ -85,8 +85,14 @@ export default function LoginPage() {
         return;
       }
 
-      // Login successful
-      login(data.user.role, data.user.id, data.user.username);
+      // Login successful - pass workspace info to context
+      login(
+        data.user.role,
+        data.user.id,
+        data.user.username,
+        data.workspace?.code,
+        data.workspace?.name
+      );
 
       // Show super admin indicator if applicable
       if (data.isSuperAdmin) {

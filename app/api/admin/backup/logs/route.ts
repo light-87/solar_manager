@@ -5,13 +5,18 @@
 
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { requireWorkspaceId } from '@/lib/workspace-auth';
 
 export async function GET(request: Request) {
   try {
-    // Fetch recent backup logs (last 50)
+    // 🔒 CRITICAL SECURITY: Get workspace_id from request header
+    const workspaceId = requireWorkspaceId(request);
+
+    // Fetch recent backup logs for THIS workspace (last 50)
     const { data: logs, error } = await supabase
       .from('backup_logs')
       .select('*')
+      .eq('workspace_id', workspaceId)  // 🔐 WORKSPACE ISOLATION!
       .order('created_at', { ascending: false })
       .limit(50);
 
