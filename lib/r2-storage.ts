@@ -383,40 +383,89 @@ export async function downloadBlobFile(keyOrUrl: string): Promise<{
 }
 
 /**
+ * Document info with category for descriptive naming
+ */
+export interface DocumentInfo {
+  url: string;
+  category: string;
+  stepNumber: number;
+  index?: number; // For arrays (e.g., bank_passbook[0], bank_passbook[1])
+}
+
+/**
  * Extract all document keys from step data
  * Handles both R2 keys and old Vercel Blob URLs
  */
 export function extractDocumentUrls(stepDataArray: any[]): string[] {
-  const keys: string[] = [];
+  const docs = extractDocumentsWithCategory(stepDataArray);
+  // Remove duplicates for backward compatibility
+  return [...new Set(docs.map((d) => d.url))];
+}
+
+/**
+ * Extract all documents with their category information
+ * This allows for descriptive file naming in backups
+ */
+export function extractDocumentsWithCategory(stepDataArray: any[]): DocumentInfo[] {
+  const documents: DocumentInfo[] = [];
+
+  // Map of field names to human-readable category names
+  const categoryNames: Record<string, string> = {
+    aadhaar_card: 'Aadhaar_Card',
+    pan_card: 'PAN_Card',
+    electric_bill: 'Electric_Bill',
+    bank_passbook: 'Bank_Passbook',
+    jan_samarth: 'Jan_Samarth',
+    acknowledgment: 'Acknowledgment',
+    completion_file: 'Completion_File',
+    gps_photo: 'GPS_Photo',
+    net_agreement: 'Net_Agreement',
+    model_agreement: 'Model_Agreement',
+    dcr_ndcr_certificate: 'DCR_NDCR_Certificate',
+  };
+
+  const isDocumentUrl = (value: string): boolean => {
+    if (typeof value !== 'string') return false;
+    // R2 key format: workspaceId/customerId/category/file
+    if (value.includes('/') && !value.startsWith('http')) return true;
+    // Old Vercel Blob URLs
+    if (value.includes('blob.vercel-storage.com')) return true;
+    // R2 presigned URLs
+    if (value.includes('r2.cloudflarestorage.com')) return true;
+    return false;
+  };
 
   stepDataArray.forEach((stepData) => {
     const data = stepData.data || {};
+    const stepNumber = stepData.step_number || 0;
 
-    const extractFromObject = (obj: any) => {
+    const extractFromObject = (obj: any, parentKey: string = '') => {
       for (const key in obj) {
         const value = obj[key];
+        const categoryKey = parentKey || key;
+        const categoryName = categoryNames[categoryKey] || categoryKey.replace(/_/g, ' ');
 
-        if (typeof value === 'string') {
-          // R2 key format: workspaceId/customerId/category/file
-          if (value.includes('/') && !value.startsWith('http')) {
-            keys.push(value);
-          }
-          // Old Vercel Blob URLs
-          else if (value.includes('blob.vercel-storage.com')) {
-            keys.push(value);
-          }
-          // R2 presigned URLs
-          else if (value.includes('r2.cloudflarestorage.com')) {
-            keys.push(value);
-          }
+        if (typeof value === 'string' && isDocumentUrl(value)) {
+          documents.push({
+            url: value,
+            category: categoryName,
+            stepNumber,
+          });
         } else if (Array.isArray(value)) {
-          value.forEach((item) => {
-            if (typeof item === 'string' && (item.includes('/') || item.includes('blob.vercel-storage.com') || item.includes('r2.cloudflarestorage.com'))) {
-              keys.push(item);
+          value.forEach((item, index) => {
+            if (typeof item === 'string' && isDocumentUrl(item)) {
+              documents.push({
+                url: item,
+                category: categoryName,
+                stepNumber,
+                index: index + 1,
+              });
             }
           });
         } else if (typeof value === 'object' && value !== null) {
-          extractFromObject(value);
+          // Don't drill into nested objects for document extraction
+          // as documents are typically at the first level
+          extractFromObject(value, categoryKey);
         }
       }
     };
@@ -424,6 +473,5 @@ export function extractDocumentUrls(stepDataArray: any[]): string[] {
     extractFromObject(data);
   });
 
-  // Remove duplicates
-  return [...new Set(keys)];
+  return documents;
 }

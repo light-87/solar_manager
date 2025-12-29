@@ -4,7 +4,7 @@
  */
 
 import JSZip from 'jszip';
-import { downloadBlobFile, extractDocumentUrls } from './r2-storage';
+import { downloadBlobFile, extractDocumentsWithCategory, DocumentInfo } from './r2-storage';
 import type { Customer } from '@/types';
 
 interface StepData {
@@ -278,6 +278,39 @@ export function generateCustomerReport(
 }
 
 /**
+ * Sanitize customer name for file naming
+ */
+function sanitizeCustomerName(name: string): string {
+  return name
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-zA-Z0-9_-]/g, '')
+    .substring(0, 30); // Limit length
+}
+
+/**
+ * Get file extension from filename or content type
+ */
+function getFileExtension(filename: string, contentType: string): string {
+  // Try to get extension from filename
+  const extMatch = filename.match(/\.([a-zA-Z0-9]+)$/);
+  if (extMatch) {
+    return extMatch[1].toLowerCase();
+  }
+
+  // Fallback to content type
+  const mimeExtensions: Record<string, string> = {
+    'application/pdf': 'pdf',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+  };
+
+  return mimeExtensions[contentType] || 'bin';
+}
+
+/**
  * Create backup ZIP for a customer
  */
 export async function createCustomerBackupZip(
@@ -286,6 +319,9 @@ export async function createCustomerBackupZip(
   exportedBy: string
 ): Promise<Blob> {
   const zip = new JSZip();
+
+  // Create a documents folder
+  const documentsFolder = zip.folder('documents');
 
   // 1. Generate and add HTML report
   const reportHtml = generateCustomerReport(customer, steps, exportedBy);
@@ -300,19 +336,40 @@ export async function createCustomerBackupZip(
   };
   zip.file('customer-data.json', JSON.stringify(customerData, null, 2));
 
-  // 3. Extract and download all document files
-  const documentUrls = extractDocumentUrls(steps);
+  // 3. Extract and download all document files with category info
+  const documents = extractDocumentsWithCategory(steps);
+  const customerPrefix = sanitizeCustomerName(customer.name);
 
-  for (const url of documentUrls) {
+  // Track used filenames to avoid collisions
+  const usedFilenames = new Set<string>();
+
+  for (const doc of documents) {
     try {
-      const fileData = await downloadBlobFile(url);
-      if (fileData) {
-        // Add file to ZIP with sanitized filename
-        const sanitizedFilename = fileData.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-        zip.file(sanitizedFilename, fileData.buffer);
+      const fileData = await downloadBlobFile(doc.url);
+      if (fileData && documentsFolder) {
+        // Get file extension
+        const extension = getFileExtension(fileData.filename, fileData.contentType);
+
+        // Build descriptive filename: CustomerName_Category[_Index].ext
+        let baseFilename = `${customerPrefix}_${doc.category}`;
+        if (doc.index) {
+          baseFilename += `_${doc.index}`;
+        }
+        let filename = `${baseFilename}.${extension}`;
+
+        // Handle collisions by adding a suffix
+        let counter = 1;
+        while (usedFilenames.has(filename.toLowerCase())) {
+          filename = `${baseFilename}_${counter}.${extension}`;
+          counter++;
+        }
+        usedFilenames.add(filename.toLowerCase());
+
+        // Add file to documents folder
+        documentsFolder.file(filename, fileData.buffer);
       }
     } catch (error) {
-      console.error(`Error downloading file ${url}:`, error);
+      console.error(`Error downloading file ${doc.url}:`, error);
       // Continue with other files
     }
   }

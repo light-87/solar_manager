@@ -84,7 +84,7 @@ export default function Step1({ customer, stepData, onSave, onUpdateCustomer }: 
       <div className="space-y-4">
         <h4 className="font-semibold text-stone-900">Customer Information</h4>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-1">
               Customer Name
@@ -92,18 +92,6 @@ export default function Step1({ customer, stepData, onSave, onUpdateCustomer }: 
             <input
               type="text"
               value={customer.name}
-              disabled
-              className="w-full px-3 py-2 border border-stone-300 rounded-lg bg-stone-100 text-stone-500 cursor-not-allowed"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={customer.email || 'N/A'}
               disabled
               className="w-full px-3 py-2 border border-stone-300 rounded-lg bg-stone-100 text-stone-500 cursor-not-allowed"
             />
@@ -120,6 +108,18 @@ export default function Step1({ customer, stepData, onSave, onUpdateCustomer }: 
               className="w-full px-3 py-2 border border-stone-300 rounded-lg bg-stone-100 text-stone-500 cursor-not-allowed"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-stone-700 mb-1">
+            Email
+          </label>
+          <input
+            type="email"
+            value={customer.email || 'N/A'}
+            disabled
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg bg-stone-100 text-stone-500 cursor-not-allowed truncate"
+          />
         </div>
 
         <div>
