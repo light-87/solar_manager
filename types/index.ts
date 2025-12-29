@@ -67,7 +67,7 @@ export interface Step1Data {
 
 // Step 2: Site Selection
 export interface Step2Data {
-  selected_site?: 'site_a' | 'site_b' | 'site_c';
+  selected_site?: string; // Dynamic portal site names from workspace settings
   status: 'filled' | 'not_filled';
   completion_date?: string;
 }
