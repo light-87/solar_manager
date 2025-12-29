@@ -765,11 +765,14 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           {/* Customer Info Card */}
           <div className="bg-white rounded-lg border border-stone-200 p-6">
             <h3 className="font-semibold text-stone-900 mb-4">Customer Information</h3>
+
+            {/* Email on its own row on mobile to prevent overflow */}
+            <div className="mb-4">
+              <p className="text-sm text-stone-600">Email</p>
+              <p className="font-medium text-stone-900 break-all">{customer.email || 'N/A'}</p>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-stone-600">Email</p>
-                <p className="font-medium text-stone-900">{customer.email || 'N/A'}</p>
-              </div>
               <div>
                 <p className="text-sm text-stone-600">Phone</p>
                 <p className="font-medium text-stone-900">{customer.phone}</p>
