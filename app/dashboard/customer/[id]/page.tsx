@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -36,6 +36,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set());
   const router = useRouter();
   const { userRole } = useAuth();
+  const hasInitializedStep = useRef(false);
 
   useEffect(() => {
     fetchCustomerData();
@@ -54,7 +55,12 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       setCustomer(customerData.customer);
       setSteps(stepsData.steps || []);
       setNotes(customerData.customer.notes || '');
-      setSelectedStep(customerData.customer.current_step);
+      // Only auto-navigate to current step on initial page load
+      // After that, let the user navigate freely without being reset
+      if (!hasInitializedStep.current) {
+        setSelectedStep(customerData.customer.current_step);
+        hasInitializedStep.current = true;
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching customer:', error);
